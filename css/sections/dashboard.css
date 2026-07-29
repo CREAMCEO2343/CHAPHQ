@@ -1,5 +1,12 @@
 /* dashboard.css — styles specific to the Dashboard section. */
 
+/* Header row: title on the left, settings gear on the right */
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
 .dashboard-gym-card {
   display: flex;
   align-items: center;

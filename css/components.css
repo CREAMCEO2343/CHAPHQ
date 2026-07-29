@@ -350,6 +350,62 @@
   display: block;
 }
 
+/* ===== Link tiles (grid of tappable shortcuts, e.g. Dashboard quick links) ===== */
+
+.link-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.link-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+}
+
+.link-tile .icon {
+  font-size: 28px;
+}
+
+.link-tile .label {
+  font: var(--text-subhead);
+  font-weight: 600;
+}
+
+/* ===== Segmented control (sub-tabs inside a pillar) ===== */
+
+.segmented {
+  display: flex;
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmented__item {
+  flex: 1;
+  padding: var(--space-2) var(--space-2);
+  border-radius: calc(var(--radius-md) - 3px);
+  font: var(--text-subhead);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease-standard), color var(--duration-fast) var(--ease-standard);
+}
+
+.segmented__item.active {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
 /* ===== Streak / badge pill ===== */
 
 .badge {
