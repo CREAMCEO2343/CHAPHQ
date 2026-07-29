@@ -23,12 +23,12 @@ export const STORE_NAMES = {
   EXERCISE_LOGS: 'exerciseLogs',
   BODY_STATS: 'bodyStats',
   // Investing pillar
+  HOLDINGS: 'holdings',
   TRADES: 'trades',
   WATCHLIST: 'watchlist',
   MACRO_NOTES: 'macroNotes',
   BIZ_ITEMS: 'bizItems',
-  // Dashboard / Goals
-  GOALS: 'goals',
+  // Dashboard
   DAILY_LOGS: 'dailyLogs',
   // App-wide
   SETTINGS: 'settings',
@@ -44,11 +44,11 @@ export const STORE_DEFINITIONS = [
   { name: STORE_NAMES.WORKOUT_SPLITS, keyPath: 'id' },
   { name: STORE_NAMES.EXERCISE_LOGS, keyPath: 'id' },
   { name: STORE_NAMES.BODY_STATS, keyPath: 'id' },
+  { name: STORE_NAMES.HOLDINGS, keyPath: 'id' },
   { name: STORE_NAMES.TRADES, keyPath: 'id' },
   { name: STORE_NAMES.WATCHLIST, keyPath: 'id' },
   { name: STORE_NAMES.MACRO_NOTES, keyPath: 'id' },
   { name: STORE_NAMES.BIZ_ITEMS, keyPath: 'id' },
-  { name: STORE_NAMES.GOALS, keyPath: 'id' },
   // Daily logs use the date itself ("2026-07-29") as the key, since
   // there's only ever one log per day.
   { name: STORE_NAMES.DAILY_LOGS, keyPath: 'date' },
@@ -168,6 +168,26 @@ export function createBodyStat(overrides = {}) {
 
 // ---- Investing pillar ----
 
+// One position you own. `account` separates the regular brokerage bucket
+// from the IRA. Prices are daily closes — `lastClose` is the most recent
+// close you've entered (or a future price feed has written), `prevClose`
+// the one before it, so day-change can be computed. A phase-2 live price
+// feed only needs to update these same three fields.
+export function createHolding(overrides = {}) {
+  return {
+    id: newId(),
+    account: 'brokerage', // 'brokerage' | 'ira'
+    ticker: '',
+    shares: null,
+    avgCost: null, // average cost per share (optional, for future gain/loss)
+    lastClose: null,
+    prevClose: null,
+    priceDate: null, // "2026-07-29" — the date lastClose is from
+    createdAt: Date.now(),
+    ...overrides,
+  };
+}
+
 export function createTrade(overrides = {}) {
   return {
     id: newId(),
@@ -222,20 +242,7 @@ export function createBizItem(overrides = {}) {
   };
 }
 
-// ---- Dashboard / Goals ----
-
-export function createGoal(overrides = {}) {
-  return {
-    id: newId(),
-    type: 'habit', // 'habit' | 'fitness' | 'personal'
-    title: '',
-    targetPerWeek: 7,
-    streak: 0,
-    completedDates: [], // ["2026-07-29", ...]
-    createdAt: Date.now(),
-    ...overrides,
-  };
-}
+// ---- Dashboard ----
 
 export function createDailyLog(overrides = {}) {
   return {

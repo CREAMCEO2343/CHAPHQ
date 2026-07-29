@@ -42,13 +42,11 @@ export const Storage = {
   bodyStats: createCollection(STORE_NAMES.BODY_STATS),
 
   // Investing pillar
+  holdings: createCollection(STORE_NAMES.HOLDINGS),
   trades: createCollection(STORE_NAMES.TRADES),
   watchlist: createCollection(STORE_NAMES.WATCHLIST),
   macroNotes: createCollection(STORE_NAMES.MACRO_NOTES),
   bizItems: createCollection(STORE_NAMES.BIZ_ITEMS),
-
-  // Dashboard / Goals
-  goals: createCollection(STORE_NAMES.GOALS),
 
   // Daily logs are keyed by date string instead of a random id, since
   // there's only ever one per day — getByDate is the natural lookup.

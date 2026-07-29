@@ -17,7 +17,8 @@ import { STORE_DEFINITIONS } from './schema.js';
 const DB_NAME = 'liamhq-db';
 // v2: Liam HQ pillar restructure — added foodLogs, workoutSplits,
 // bodyStats, trades, watchlist, macroNotes, bizItems stores.
-const DB_VERSION = 2;
+// v3: added holdings (portfolio); removed goals (feature dropped).
+const DB_VERSION = 3;
 
 let dbPromise = null;
 
@@ -28,12 +29,22 @@ function openDB() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     // Runs the first time the app opens, or whenever DB_VERSION is bumped.
-    // This is the only place object stores are allowed to be created.
+    // This is the only place object stores are allowed to be created or
+    // deleted. Any store no longer listed in schema.js gets removed here
+    // (that's how dropped features like Goals are cleaned up).
     request.onupgradeneeded = () => {
       const db = request.result;
+      const definedNames = STORE_DEFINITIONS.map((def) => def.name);
+
       STORE_DEFINITIONS.forEach(({ name, keyPath }) => {
         if (!db.objectStoreNames.contains(name)) {
           db.createObjectStore(name, { keyPath });
+        }
+      });
+
+      [...db.objectStoreNames].forEach((existingName) => {
+        if (!definedNames.includes(existingName)) {
+          db.deleteObjectStore(existingName);
         }
       });
     };

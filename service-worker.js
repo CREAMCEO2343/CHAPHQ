@@ -11,8 +11,8 @@
 // CACHE_VERSION by 1. Bumping the version is what tells an iPhone that
 // already installed the app "hey, there's an update, refresh your cache."
 
-const CACHE_VERSION = 'v1';
-const CACHE_NAME = `life-app-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `chaphq-${CACHE_VERSION}`;
 
 const APP_SHELL_FILES = [
   './',
@@ -23,27 +23,25 @@ const APP_SHELL_FILES = [
   './css/components.css',
   './css/navbar.css',
   './css/sections/dashboard.css',
-  './css/sections/meals.css',
-  './css/sections/grocery.css',
-  './css/sections/workouts.css',
-  './css/sections/progress.css',
+  './css/sections/gym.css',
+  './css/sections/food.css',
+  './css/sections/investing.css',
   './css/sections/school.css',
-  './css/sections/goals.css',
   './css/sections/settings.css',
   './js/app.js',
   './js/router.js',
   './js/data/db.js',
   './js/data/storage.js',
   './js/data/schema.js',
+  './js/data/prices.js',
   './js/components/navbar.js',
   './js/components/modal.js',
+  './js/components/tabs.js',
   './js/sections/dashboard.js',
-  './js/sections/meals.js',
-  './js/sections/grocery.js',
-  './js/sections/workouts.js',
-  './js/sections/progress.js',
+  './js/sections/gym.js',
+  './js/sections/food.js',
+  './js/sections/investing.js',
   './js/sections/school.js',
-  './js/sections/goals.js',
   './js/sections/settings.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -75,7 +73,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((names) =>
       Promise.all(
         names
-          .filter((name) => name.startsWith('life-app-') && name !== CACHE_NAME)
+          .filter((name) => (name.startsWith('chaphq-') || name.startsWith('life-app-')) && name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       )
     )

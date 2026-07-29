@@ -1,5 +1,82 @@
 /* food.css — styles specific to the Food pillar (meal list styles carried over from the original Meals section). */
 
+/* ===== Today tab ===== */
+
+.food-water-tile {
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.food-water-tile:active {
+  transform: scale(0.96);
+}
+
+.food-water-goal {
+  font: var(--text-footnote);
+  color: var(--color-text-tertiary);
+}
+
+.food-pie-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-3);
+}
+
+.food-pie {
+  width: 120px;
+  height: 120px;
+  flex: none;
+}
+
+.food-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font: var(--text-subhead);
+}
+
+.food-pie-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  margin-right: var(--space-2);
+}
+
+.food-quickadd__row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.food-quickadd__row .input {
+  flex: 1;
+}
+
+.food-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.food-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+/* ===== Grocery tab ===== */
+
+.grocery-row {
+  cursor: pointer;
+}
+
+.grocery-row--checked .list-row__title {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
 .meal-row__thumb {
   width: 48px;
   height: 48px;

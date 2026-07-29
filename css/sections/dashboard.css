@@ -34,6 +34,9 @@
   margin-top: 2px;
 }
 
+.dashboard-hero__up { color: var(--color-success); }
+.dashboard-hero__down { color: var(--color-danger); }
+
 /* The collapsed "everything else" area below the hero cards */
 .dashboard-more {
   display: flex;
