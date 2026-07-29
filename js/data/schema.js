@@ -14,32 +14,57 @@
 // created on next launch.
 
 export const STORE_NAMES = {
+  // Food pillar
   MEALS: 'meals',
   GROCERY_ITEMS: 'groceryItems',
-  WORKOUT_ROUTINES: 'workoutRoutines',
+  FOOD_LOGS: 'foodLogs',
+  // Gym pillar
+  WORKOUT_SPLITS: 'workoutSplits',
   EXERCISE_LOGS: 'exerciseLogs',
-  PROGRESS_ENTRIES: 'progressEntries',
-  SCHOOL_ITEMS: 'schoolItems',
+  BODY_STATS: 'bodyStats',
+  // Investing pillar
+  TRADES: 'trades',
+  WATCHLIST: 'watchlist',
+  MACRO_NOTES: 'macroNotes',
+  BIZ_ITEMS: 'bizItems',
+  // Dashboard / Goals
   GOALS: 'goals',
   DAILY_LOGS: 'dailyLogs',
+  // App-wide
   SETTINGS: 'settings',
 };
 
 // Every object store, and which field of its records is the unique key.
-// db.js reads this list to create the stores the first time the app runs.
+// db.js reads this list to create the stores the first time the app runs
+// (or when DB_VERSION is bumped).
 export const STORE_DEFINITIONS = [
   { name: STORE_NAMES.MEALS, keyPath: 'id' },
   { name: STORE_NAMES.GROCERY_ITEMS, keyPath: 'id' },
-  { name: STORE_NAMES.WORKOUT_ROUTINES, keyPath: 'id' },
+  { name: STORE_NAMES.FOOD_LOGS, keyPath: 'id' },
+  { name: STORE_NAMES.WORKOUT_SPLITS, keyPath: 'id' },
   { name: STORE_NAMES.EXERCISE_LOGS, keyPath: 'id' },
-  { name: STORE_NAMES.PROGRESS_ENTRIES, keyPath: 'id' },
-  { name: STORE_NAMES.SCHOOL_ITEMS, keyPath: 'id' },
+  { name: STORE_NAMES.BODY_STATS, keyPath: 'id' },
+  { name: STORE_NAMES.TRADES, keyPath: 'id' },
+  { name: STORE_NAMES.WATCHLIST, keyPath: 'id' },
+  { name: STORE_NAMES.MACRO_NOTES, keyPath: 'id' },
+  { name: STORE_NAMES.BIZ_ITEMS, keyPath: 'id' },
   { name: STORE_NAMES.GOALS, keyPath: 'id' },
   // Daily logs use the date itself ("2026-07-29") as the key, since
   // there's only ever one log per day.
   { name: STORE_NAMES.DAILY_LOGS, keyPath: 'date' },
   // Settings is a simple key/value store: { key: 'theme', value: 'dark' }.
   { name: STORE_NAMES.SETTINGS, keyPath: 'key' },
+];
+
+// The 5 workout splits the Gym pillar starts with. These are seeded into
+// the database on first launch (see storage.js) and fully editable after
+// that — this list is only the starting point, not a limit.
+export const DEFAULT_SPLITS = [
+  { name: 'Chest / Tri', icon: '🏋️' },
+  { name: 'Back / Bi', icon: '🚣' },
+  { name: 'Shoulders', icon: '🤸' },
+  { name: 'Legs', icon: '🦵' },
+  { name: 'Cardio', icon: '🏃' },
 ];
 
 function newId() {
@@ -54,6 +79,8 @@ function todayISO() {
 // Each function returns a fresh object with every field the app might
 // eventually use, pre-filled with empty/default values. Spread your own
 // values over the top, e.g. createMeal({ name: 'Oatmeal' }).
+
+// ---- Food pillar ----
 
 export function createMeal(overrides = {}) {
   return {
@@ -82,10 +109,31 @@ export function createGroceryItem(overrides = {}) {
   };
 }
 
-export function createWorkoutRoutine(overrides = {}) {
+// One "thing I ate" entry. The Food pillar sums today's entries for the
+// macro totals + pie chart, and the Dashboard reads the same numbers.
+export function createFoodLog(overrides = {}) {
+  return {
+    id: newId(),
+    date: todayISO(),
+    name: '',
+    calories: null,
+    protein: null,
+    carbs: null,
+    fat: null,
+    mealId: null, // set when logged from a saved meal
+    source: 'manual', // 'manual' | 'meal' | 'quick-add'
+    createdAt: Date.now(),
+    ...overrides,
+  };
+}
+
+// ---- Gym pillar ----
+
+export function createWorkoutSplit(overrides = {}) {
   return {
     id: newId(),
     name: '',
+    icon: '🏋️',
     exercises: [], // [{ name, targetSets, targetReps }]
     createdAt: Date.now(),
     ...overrides,
@@ -95,7 +143,7 @@ export function createWorkoutRoutine(overrides = {}) {
 export function createExerciseLog(overrides = {}) {
   return {
     id: newId(),
-    routineId: null,
+    splitId: null,
     exerciseName: '',
     date: todayISO(),
     sets: [], // [{ reps, weight }]
@@ -104,7 +152,8 @@ export function createExerciseLog(overrides = {}) {
   };
 }
 
-export function createProgressEntry(overrides = {}) {
+// Weight, body fat, measurements, progress photo — one entry per check-in.
+export function createBodyStat(overrides = {}) {
   return {
     id: newId(),
     date: todayISO(),
@@ -117,18 +166,63 @@ export function createProgressEntry(overrides = {}) {
   };
 }
 
-export function createSchoolItem(overrides = {}) {
+// ---- Investing pillar ----
+
+export function createTrade(overrides = {}) {
   return {
     id: newId(),
-    type: 'assignment', // 'class' | 'assignment' | 'exam' | 'note'
-    title: '',
-    details: '',
-    dueDate: null,
-    completed: false,
+    ticker: '',
+    direction: 'long', // 'long' | 'short'
+    entryPrice: null,
+    exitPrice: null,
+    quantity: null,
+    entryDate: todayISO(),
+    exitDate: null,
+    reasoning: '',
+    outcome: '', // your own post-trade notes: what happened, lessons
+    status: 'open', // 'open' | 'closed'
     createdAt: Date.now(),
     ...overrides,
   };
 }
+
+export function createWatchlistItem(overrides = {}) {
+  return {
+    id: newId(),
+    ticker: '',
+    note: '',
+    isPosition: false, // true = currently held, false = just watching
+    createdAt: Date.now(),
+    ...overrides,
+  };
+}
+
+export function createMacroNote(overrides = {}) {
+  return {
+    id: newId(),
+    date: todayISO(),
+    title: '',
+    body: '',
+    createdAt: Date.now(),
+    ...overrides,
+  };
+}
+
+// Hollingsworth Capital: business content ideas and to-dos in one store,
+// separated by `type`.
+export function createBizItem(overrides = {}) {
+  return {
+    id: newId(),
+    type: 'todo', // 'todo' | 'content'
+    title: '',
+    details: '',
+    done: false,
+    createdAt: Date.now(),
+    ...overrides,
+  };
+}
+
+// ---- Dashboard / Goals ----
 
 export function createGoal(overrides = {}) {
   return {
@@ -146,8 +240,6 @@ export function createGoal(overrides = {}) {
 export function createDailyLog(overrides = {}) {
   return {
     date: todayISO(),
-    calories: null,
-    protein: null,
     waterMl: null,
     weight: null,
     gymCompleted: false,

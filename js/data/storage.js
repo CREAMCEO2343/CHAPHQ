@@ -13,7 +13,7 @@
 // will need to change.
 
 import { getAll, get, put, remove } from './db.js';
-import { STORE_NAMES } from './schema.js';
+import { STORE_NAMES, DEFAULT_SPLITS, createWorkoutSplit } from './schema.js';
 
 // Builds the standard set of functions (getAll/get/save/remove) for a
 // store, so we don't repeat the same four lines eight times below.
@@ -27,12 +27,27 @@ function createCollection(storeName) {
 }
 
 export const Storage = {
+  // Food pillar
   meals: createCollection(STORE_NAMES.MEALS),
   groceryItems: createCollection(STORE_NAMES.GROCERY_ITEMS),
-  workoutRoutines: createCollection(STORE_NAMES.WORKOUT_ROUTINES),
+  foodLogs: {
+    ...createCollection(STORE_NAMES.FOOD_LOGS),
+    // All entries for one day — what the pie chart and macro totals use.
+    getByDate: (date) => getAll(STORE_NAMES.FOOD_LOGS).then((logs) => logs.filter((l) => l.date === date)),
+  },
+
+  // Gym pillar
+  workoutSplits: createCollection(STORE_NAMES.WORKOUT_SPLITS),
   exerciseLogs: createCollection(STORE_NAMES.EXERCISE_LOGS),
-  progressEntries: createCollection(STORE_NAMES.PROGRESS_ENTRIES),
-  schoolItems: createCollection(STORE_NAMES.SCHOOL_ITEMS),
+  bodyStats: createCollection(STORE_NAMES.BODY_STATS),
+
+  // Investing pillar
+  trades: createCollection(STORE_NAMES.TRADES),
+  watchlist: createCollection(STORE_NAMES.WATCHLIST),
+  macroNotes: createCollection(STORE_NAMES.MACRO_NOTES),
+  bizItems: createCollection(STORE_NAMES.BIZ_ITEMS),
+
+  // Dashboard / Goals
   goals: createCollection(STORE_NAMES.GOALS),
 
   // Daily logs are keyed by date string instead of a random id, since
@@ -50,3 +65,15 @@ export const Storage = {
     set: (key, value) => put(STORE_NAMES.SETTINGS, { key, value }),
   },
 };
+
+// Runs once at startup (called from app.js). If the Gym pillar has no
+// splits yet — first launch, or right after this feature shipped — seed
+// the 5 default splits so the Workout tab never starts empty.
+export async function seedDefaultsIfNeeded() {
+  const splits = await Storage.workoutSplits.getAll();
+  if (splits.length === 0) {
+    for (const split of DEFAULT_SPLITS) {
+      await Storage.workoutSplits.save(createWorkoutSplit(split));
+    }
+  }
+}

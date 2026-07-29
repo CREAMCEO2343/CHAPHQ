@@ -8,6 +8,7 @@
 
 import { initRouter } from './router.js';
 import { initNavbar } from './components/navbar.js';
+import { seedDefaultsIfNeeded } from './data/storage.js';
 
 function registerServiceWorker() {
   // Service workers only work over HTTPS or on localhost — never over a
@@ -24,5 +25,7 @@ function registerServiceWorker() {
 }
 
 initNavbar();
-initRouter();
+// Seed starter data (the 5 workout splits) before the first screen
+// renders, so sections never load against an empty database.
+seedDefaultsIfNeeded().then(() => initRouter());
 registerServiceWorker();

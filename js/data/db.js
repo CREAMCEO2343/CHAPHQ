@@ -14,8 +14,10 @@
 
 import { STORE_DEFINITIONS } from './schema.js';
 
-const DB_NAME = 'life-app-db';
-const DB_VERSION = 1;
+const DB_NAME = 'liamhq-db';
+// v2: Liam HQ pillar restructure — added foodLogs, workoutSplits,
+// bodyStats, trades, watchlist, macroNotes, bizItems stores.
+const DB_VERSION = 2;
 
 let dbPromise = null;
 

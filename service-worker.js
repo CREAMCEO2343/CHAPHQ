@@ -84,10 +84,35 @@ self.addEventListener('activate', (event) => {
 });
 
 // "fetch" fires every time the app asks for a file (a page, a script, an
-// image...). We answer from the cache first (fast, works offline), and
-// only reach out to the network if we don't have it cached yet.
+// image...).
+//
+// Two strategies, picked automatically:
+//  - On localhost (developing on the PC): NETWORK-FIRST — always try to
+//    get the freshest file, fall back to cache only if the server is
+//    down. Without this, the cache keeps serving files you edited five
+//    minutes ago, which makes development maddening.
+//  - Anywhere else (real hosting / installed on iPhone): CACHE-FIRST —
+//    instant loads and full offline support, refreshed when
+//    CACHE_VERSION is bumped.
+const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1';
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  if (IS_DEV) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const responseCopy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || (event.request.mode === 'navigate' ? caches.match('./index.html') : undefined)))
+    );
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
