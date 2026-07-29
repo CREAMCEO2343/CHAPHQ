@@ -36,8 +36,16 @@
   --radius-xl: 20px;
   --radius-full: 999px;
 
-  /* ===== Typography ===== */
-  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  /* ===== Typography =====
+     The CHAPHQ font trio:
+       Space Grotesk — headers + the wordmark (--font-display)
+       Inter         — body text (--font-family)
+       IBM Plex Mono — workout/portfolio data: weights, reps, durations,
+                       dollar values (--font-mono)
+     Each falls back to the iOS system font when offline. */
+  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-display: "Space Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --text-large-title: 700 34px/41px var(--font-family);
   --text-title1: 700 28px/34px var(--font-family);
@@ -57,15 +65,23 @@
   --duration-base: 0.25s;
   --duration-slow: 0.4s;
 
-  /* ===== Accent + semantic colors (same in light & dark, iOS system palette) ===== */
-  --color-accent: #0A84FF;
+  /* ===== Accent + semantic colors =====
+     The CHAPHQ accent is gold. Success/warning/danger stay iOS-system so
+     gains/losses and warnings read instantly. */
+  --color-gold: #D4AF37;
+  --color-accent: var(--color-gold);
+  /* Text color used ON TOP of the gold accent (buttons, active chips) —
+     dark, because white-on-gold is hard to read. */
+  --color-on-accent: #0A0C10;
   --color-success: #34C759;
   --color-warning: #FF9500;
   --color-danger: #FF3B30;
 
+  /* Gold hairline: the thin gold border on cards (subtle by design). */
+  --hairline-gold: rgba(212, 175, 55, 0.25);
+
   /* ===== Wordmark (the CHAPHQ brand mark in headers) ===== */
-  --color-gold: #D4AF37;
-  --font-wordmark: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-wordmark: var(--font-display);
   /* "CHAP" is off-white on dark backgrounds; on the light theme, off-white
      would vanish, so it darkens to near-black there (set per theme below). */
   --wordmark-primary: #1C1C1E;
@@ -93,34 +109,34 @@
   --wordmark-primary: #1C1C1E;
 }
 
-/* ===== Dark mode: follows system setting automatically ===== */
+/* ===== Dark mode (the signature CHAPHQ look): follows system setting ===== */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #000000;
-    --color-bg-elevated: #1C1C1E;
-    --color-surface: #1C1C1E;
-    --color-surface-secondary: #2C2C2E;
-    --color-text-primary: #FFFFFF;
-    --color-text-secondary: #98989D;
-    --color-text-tertiary: #636366;
-    --color-separator: rgba(84, 84, 88, 0.6);
-    --color-shadow: rgba(0, 0, 0, 0.4);
-    --color-overlay: rgba(0, 0, 0, 0.6);
+    --color-bg: #0A0C10;
+    --color-bg-elevated: #111827;
+    --color-surface: #111827;
+    --color-surface-secondary: #1F2937;
+    --color-text-primary: #F5F5F0;
+    --color-text-secondary: #9CA3AF;
+    --color-text-tertiary: #6B7280;
+    --color-separator: rgba(148, 163, 184, 0.24);
+    --color-shadow: rgba(0, 0, 0, 0.5);
+    --color-overlay: rgba(0, 0, 0, 0.65);
     --wordmark-primary: #F5F5F0;
   }
 }
 
 /* ===== Manual override: Settings page sets data-theme="dark" on <html> ===== */
 :root[data-theme="dark"] {
-  --color-bg: #000000;
-  --color-bg-elevated: #1C1C1E;
-  --color-surface: #1C1C1E;
-  --color-surface-secondary: #2C2C2E;
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #98989D;
-  --color-text-tertiary: #636366;
-  --color-separator: rgba(84, 84, 88, 0.6);
-  --color-shadow: rgba(0, 0, 0, 0.4);
-  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-bg: #0A0C10;
+  --color-bg-elevated: #111827;
+  --color-surface: #111827;
+  --color-surface-secondary: #1F2937;
+  --color-text-primary: #F5F5F0;
+  --color-text-secondary: #9CA3AF;
+  --color-text-tertiary: #6B7280;
+  --color-separator: rgba(148, 163, 184, 0.24);
+  --color-shadow: rgba(0, 0, 0, 0.5);
+  --color-overlay: rgba(0, 0, 0, 0.65);
   --wordmark-primary: #F5F5F0;
 }

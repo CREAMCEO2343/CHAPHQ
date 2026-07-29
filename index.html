@@ -14,12 +14,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
 <title>CHAPHQ</title>
 
-<!-- Space Grotesk (for the CHAPHQ wordmark). Loads from Google Fonts when
-     online; offline it falls back to the system font. To make it work
-     offline too, the font file can be downloaded into the project later. -->
+<!-- The CHAPHQ font trio: Space Grotesk (headers + wordmark), Inter
+     (body text), IBM Plex Mono (workout data: weights, reps, durations).
+     Loads from Google Fonts when online; offline it falls back to system
+     fonts. The files can be self-hosted later for guaranteed offline use. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
 
 <!--
   This tiny inline script runs immediately, before any CSS or other
@@ -40,7 +41,7 @@
 
 <!-- ===== PWA basics: lets any browser install this as an app ===== -->
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#000000" />
+<meta name="theme-color" content="#0A0C10" />
 
 <!-- ===== iOS-specific tags: Safari ignores manifest.json for a lot of this,
      so these tags are what actually make "Add to Home Screen" look and

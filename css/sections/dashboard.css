@@ -16,6 +16,7 @@
 
 .dashboard-hero .stat-tile__value {
   font: var(--text-title3);
+  font-family: var(--font-mono); /* the font shorthand above resets family, so restate mono */
   margin-top: var(--space-1);
 }
 
