@@ -40,36 +40,34 @@ export function render() {
   return `
     <div class="page-header dashboard-header">
       <div>
-        <div class="page-header__title">Liam HQ</div>
+        <span class="wordmark"><span class="wordmark__chap">CHAP</span><span class="wordmark__hq">HQ</span></span>
         <div class="page-header__subtitle">${formattedToday()}</div>
       </div>
       <button class="btn-icon" id="dashboard-settings-btn" aria-label="Settings">⚙️</button>
     </div>
     <div class="page-content">
-      <div class="section-label">Today's Food</div>
-      <div class="stat-grid" id="dashboard-macros"></div>
+      <!-- The only three things competing for attention at a glance:
+           Calories · Workout status · Streaks. Everything else lives
+           below, behind the "More" toggle. -->
+      <div class="dashboard-hero" id="dashboard-hero"></div>
 
-      <div class="section-label">Body</div>
-      <div class="stat-grid" id="dashboard-body"></div>
-      <button class="btn btn-secondary" id="log-water-weight-btn">Log Water / Weight</button>
+      <button class="btn btn-secondary" id="dashboard-more-btn" aria-expanded="false">More ▾</button>
 
-      <div class="card dashboard-gym-card" id="gym-card">
-        <div class="dashboard-gym-card__text">
-          <div class="list-row__title">Gym today</div>
-          <div class="list-row__meta">Mark today's workout complete</div>
-        </div>
-        <div class="checkbox-circle" id="gym-checkbox">&#10003;</div>
+      <div class="dashboard-more" id="dashboard-more" hidden>
+        <div class="section-label">Body</div>
+        <div class="stat-grid" id="dashboard-body"></div>
+        <button class="btn btn-secondary" id="log-water-weight-btn">Log Water / Weight</button>
+
+        <div class="section-label">Investing</div>
+        <div class="card" id="dashboard-investing-note"></div>
+
+        <div class="section-label">Goals &amp; Habits</div>
+        <div id="dashboard-goals"></div>
+        <button class="btn btn-secondary" id="add-goal-btn">+ Add Goal</button>
+
+        <div class="section-label">Quick Links</div>
+        <div class="link-grid" id="dashboard-quicklinks"></div>
       </div>
-
-      <div class="section-label">Investing</div>
-      <div class="card" id="dashboard-investing-note"></div>
-
-      <div class="section-label">Goals &amp; Habits</div>
-      <div id="dashboard-goals"></div>
-      <button class="btn btn-secondary" id="add-goal-btn">+ Add Goal</button>
-
-      <div class="section-label">Quick Links</div>
-      <div class="link-grid" id="dashboard-quicklinks"></div>
     </div>
   `;
 }
@@ -77,21 +75,19 @@ export function render() {
 export async function init() {
   const today = todayISO();
   let todayLog = (await Storage.dailyLogs.getByDate(today)) || createDailyLog();
+  const goals = await Storage.goals.getAll();
 
-  renderMacros(await Storage.foodLogs.getByDate(today));
+  renderHero(await Storage.foodLogs.getByDate(today), todayLog, goals);
   renderBodyTiles(todayLog);
-  renderGymCheckbox(todayLog);
   renderInvestingNote(await Storage.macroNotes.getAll());
   await refreshGoals();
   renderQuickLinks();
 
   document.getElementById('dashboard-settings-btn').addEventListener('click', () => navigateTo('settings'));
 
-  document.getElementById('gym-card').addEventListener('click', async () => {
-    todayLog = { ...todayLog, date: today, gymCompleted: !todayLog.gymCompleted };
-    await Storage.dailyLogs.save(todayLog);
-    renderGymCheckbox(todayLog);
-  });
+  document.getElementById('dashboard-more-btn').addEventListener('click', toggleMoreSection);
+
+  wireHeroCards();
 
   document.getElementById('log-water-weight-btn').addEventListener('click', () => {
     openWaterWeightModal(todayLog, (updated) => {
@@ -101,35 +97,71 @@ export async function init() {
   });
 
   document.getElementById('add-goal-btn').addEventListener('click', () => openGoalModal());
+
+  // renderHero replaces the card elements, so this must run again after
+  // every re-render to reattach the tap handlers.
+  function wireHeroCards() {
+    // Tapping the Workout card toggles today's gym completion.
+    document.getElementById('hero-workout').addEventListener('click', async () => {
+      todayLog = { ...todayLog, date: today, gymCompleted: !todayLog.gymCompleted };
+      await Storage.dailyLogs.save(todayLog);
+      renderHero(await Storage.foodLogs.getByDate(today), todayLog, await Storage.goals.getAll());
+      wireHeroCards();
+    });
+    // Tapping the Streaks card opens More and jumps to the goals list.
+    document.getElementById('hero-streaks').addEventListener('click', () => {
+      openMoreSection();
+      document.getElementById('dashboard-goals').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
-// ===== Today's macros (read-only here; logged from the Food pillar) =====
+// ===== More section toggle =====
 
-function renderMacros(todaysFoodLogs) {
-  const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-  todaysFoodLogs.forEach((log) => {
-    Object.keys(totals).forEach((key) => {
-      totals[key] += Number(log[key]) || 0;
-    });
-  });
+function openMoreSection() {
+  const moreEl = document.getElementById('dashboard-more');
+  const btn = document.getElementById('dashboard-more-btn');
+  moreEl.hidden = false;
+  btn.textContent = 'Less ▴';
+  btn.setAttribute('aria-expanded', 'true');
+}
 
-  const tiles = [
-    { label: 'Calories', value: totals.calories, unit: '' },
-    { label: 'Protein', value: totals.protein, unit: 'g' },
-    { label: 'Carbs', value: totals.carbs, unit: 'g' },
-    { label: 'Fat', value: totals.fat, unit: 'g' },
-  ];
+function toggleMoreSection() {
+  const moreEl = document.getElementById('dashboard-more');
+  const btn = document.getElementById('dashboard-more-btn');
+  if (moreEl.hidden) {
+    openMoreSection();
+  } else {
+    moreEl.hidden = true;
+    btn.textContent = 'More ▾';
+    btn.setAttribute('aria-expanded', 'false');
+  }
+}
 
-  document.getElementById('dashboard-macros').innerHTML = tiles
-    .map(
-      (t) => `
-        <div class="stat-tile">
-          <div class="stat-tile__label">${t.label}</div>
-          <div class="stat-tile__value">${todaysFoodLogs.length === 0 ? '—' : Math.round(t.value) + t.unit}</div>
-        </div>
-      `
-    )
-    .join('');
+// ===== Hero: the 3 at-a-glance cards =====
+
+function renderHero(todaysFoodLogs, todayLog, goals) {
+  const calories = todaysFoodLogs.reduce((sum, log) => sum + (Number(log.calories) || 0), 0);
+  const bestStreak = goals.length ? Math.max(0, ...goals.map(computeStreak)) : 0;
+  const activeCount = goals.filter((g) => computeStreak(g) > 0).length;
+
+  document.getElementById('dashboard-hero').innerHTML = `
+    <div class="stat-tile">
+      <div class="stat-tile__label">Calories</div>
+      <div class="stat-tile__value">${todaysFoodLogs.length === 0 ? '—' : Math.round(calories)}</div>
+      <div class="stat-tile__meta">today</div>
+    </div>
+    <div class="stat-tile dashboard-hero__tappable" id="hero-workout" role="button">
+      <div class="stat-tile__label">Workout</div>
+      <div class="stat-tile__value">${todayLog.gymCompleted ? '✅' : '—'}</div>
+      <div class="stat-tile__meta">${todayLog.gymCompleted ? 'done' : 'tap when done'}</div>
+    </div>
+    <div class="stat-tile dashboard-hero__tappable" id="hero-streaks" role="button">
+      <div class="stat-tile__label">Streaks</div>
+      <div class="stat-tile__value">${bestStreak > 0 ? '🔥 ' + bestStreak : '—'}</div>
+      <div class="stat-tile__meta">${activeCount > 0 ? activeCount + ' active' : 'no streaks yet'}</div>
+    </div>
+  `;
 }
 
 // ===== Water + weight =====
@@ -184,12 +216,6 @@ function openWaterWeightModal(currentLog, onSaved) {
       });
     },
   });
-}
-
-// ===== Gym =====
-
-function renderGymCheckbox(log) {
-  document.getElementById('gym-checkbox').classList.toggle('checked', !!log.gymCompleted);
 }
 
 // ===== Investing snapshot =====

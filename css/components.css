@@ -350,6 +350,29 @@
   display: block;
 }
 
+/* ===== CHAPHQ wordmark =====
+   Two-tone brand mark: "CHAP" heavy in off-white (near-black on the light
+   theme), "HQ" lighter weight in gold. Used in the Dashboard header. */
+
+.wordmark {
+  font-family: var(--font-wordmark);
+  font-size: 30px;
+  line-height: 38px;
+  letter-spacing: 0.01em;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.wordmark__chap {
+  font-weight: 700;
+  color: var(--wordmark-primary);
+}
+
+.wordmark__hq {
+  font-weight: 400;
+  color: var(--color-gold);
+}
+
 /* ===== Link tiles (grid of tappable shortcuts, e.g. Dashboard quick links) ===== */
 
 .link-grid {

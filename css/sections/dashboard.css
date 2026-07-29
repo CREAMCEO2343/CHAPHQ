@@ -7,17 +7,44 @@
   justify-content: space-between;
 }
 
-.dashboard-gym-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
+/* The 3 at-a-glance hero cards: Calories · Workout · Streaks */
+.dashboard-hero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
 }
 
-.dashboard-gym-card__text {
+.dashboard-hero .stat-tile__value {
+  font: var(--text-title3);
+  margin-top: var(--space-1);
+}
+
+.dashboard-hero__tappable {
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.dashboard-hero__tappable:active {
+  transform: scale(0.96);
+}
+
+.stat-tile__meta {
+  font: var(--text-caption1);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+/* The collapsed "everything else" area below the hero cards */
+.dashboard-more {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-4);
+}
+
+/* display:flex above would silently defeat the hidden attribute, so make
+   hidden explicitly win — otherwise the More section always shows. */
+.dashboard-more[hidden] {
+  display: none;
 }
 
 .dashboard-log-form {

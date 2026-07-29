@@ -1,1 +1,84 @@
-/* gym.css — styles specific to the Gym pillar. Filled in when the pillar is built. */
+/* gym.css — styles specific to the Gym pillar. */
+
+.gym-split-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.gym-split-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: left;
+  width: 100%;
+}
+
+.gym-split-card__icon {
+  font-size: 26px;
+}
+
+.gym-split-card__name {
+  font: var(--text-headline);
+  flex: 1;
+}
+
+.gym-split-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.gym-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.gym-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.gym-form__delete {
+  color: var(--color-danger);
+}
+
+.gym-body-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex: none;
+}
+
+#split-exercise-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* History rows: collapsed summary by default, tap to expand the set list */
+.gym-history-row {
+  cursor: pointer;
+}
+
+.gym-history-row__chevron {
+  color: var(--color-text-tertiary);
+  font-size: 18px;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.gym-history-row.expanded .gym-history-row__chevron {
+  transform: rotate(90deg);
+}
+
+.gym-history-row__sets {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 0.5px solid var(--color-separator);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

@@ -80,7 +80,10 @@ while ($true) {
         if (-not $contentType) { $contentType = "application/octet-stream" }
 
         $fileBytes = [System.IO.File]::ReadAllBytes($filePath)
-        $headerText = "HTTP/1.1 200 OK`r`nContent-Type: $contentType`r`nContent-Length: $($fileBytes.Length)`r`nConnection: close`r`n`r`n"
+        # no-cache = the browser must re-check with us before using an old
+        # copy. Without this, edits don't show up until the browser feels
+        # like refreshing its cache — maddening during development.
+        $headerText = "HTTP/1.1 200 OK`r`nContent-Type: $contentType`r`nContent-Length: $($fileBytes.Length)`r`nCache-Control: no-cache`r`nConnection: close`r`n`r`n"
         $headerBytes = [System.Text.Encoding]::ASCII.GetBytes($headerText)
 
         $stream.Write($headerBytes, 0, $headerBytes.Length)
