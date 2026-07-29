@@ -12,7 +12,7 @@
 //             manual adds, plus whatever meals push into it.
 
 import { Storage } from '../data/storage.js';
-import { createMeal, createGroceryItem, createFoodLog } from '../data/schema.js';
+import { createMeal, createGroceryItem, createFoodLog, GROCERY_STAPLES } from '../data/schema.js';
 import { openModal, closeModal } from '../components/modal.js';
 import { initTabs } from '../components/tabs.js';
 
@@ -20,6 +20,15 @@ const WATER_GOAL_ML = 3000; // daily target; a Settings option can override late
 const WATER_STEP_ML = 250; // one tap = one glass
 
 const GROCERY_CATEGORIES = ['Produce', 'Meat', 'Dairy', 'Pantry', 'Frozen', 'Other'];
+
+// The staples palette, collapsed into { group: [{ name, category }] } so
+// it renders as the headings you'd actually think in (Proteins, Carbs,
+// ...) even where one group spans two store sections.
+const STAPLE_GROUPS = GROCERY_STAPLES.reduce((groups, entry) => {
+  const bucket = (groups[entry.group] ||= []);
+  entry.items.forEach((name) => bucket.push({ name, category: entry.category }));
+  return groups;
+}, {});
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -419,9 +428,28 @@ function renderMealsList() {
   });
 }
 
+// Ingredients round-trip through a plain textarea, one per line. An
+// optional ingredient is written back out with a trailing "(optional)"
+// so editing a meal doesn't silently promote its garnishes to required.
+function ingredientsToText(ingredients) {
+  return (ingredients || []).map((i) => (i.optional ? `${i.name} (optional)` : i.name)).join('\n');
+}
+
+function ingredientsFromText(text) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const optional = /\(optional\)$/i.test(line);
+      const name = optional ? line.replace(/\s*\(optional\)$/i, '').trim() : line;
+      return optional ? { name, quantity: '', optional: true } : { name, quantity: '' };
+    });
+}
+
 function openMealFormModal(existingMeal = null) {
   const meal = existingMeal || createMeal();
-  const ingredientsText = (meal.ingredients || []).map((i) => i.name).join('\n');
+  const ingredientsText = ingredientsToText(meal.ingredients);
 
   openModal({
     title: existingMeal ? 'Edit Meal' : 'Add Meal',
@@ -476,12 +504,7 @@ function openMealFormModal(existingMeal = null) {
           const v = document.getElementById(id).value;
           return v === '' ? null : Number(v);
         };
-        const ingredients = document
-          .getElementById('meal-ingredients')
-          .value.split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((name) => ({ name, quantity: '' }));
+        const ingredients = ingredientsFromText(document.getElementById('meal-ingredients').value);
 
         await Storage.meals.save({
           ...meal,
@@ -525,7 +548,14 @@ function openMealDetailModal(meal) {
           <div>
             <div class="section-label">Ingredients</div>
             <ul class="meals-detail__ingredients">
-              ${meal.ingredients.map((i) => `<li>${escapeHTML(i.name)}</li>`).join('')}
+              ${meal.ingredients
+                .map(
+                  (i) =>
+                    `<li${i.optional ? ' class="meals-detail__ingredient--optional"' : ''}>${escapeHTML(i.name)}${
+                      i.optional ? '<span class="meals-detail__optional-tag">optional</span>' : ''
+                    }</li>`
+                )
+                .join('')}
             </ul>
           </div>
         ` : ''}
@@ -590,13 +620,64 @@ function openMealDetailModal(meal) {
    GROCERY TAB — categorized shopping list
    ===================================================================== */
 
+// Whether the staples palette is expanded. Starts open on an empty list
+// (staples are the obvious first move) and closed once there's a list to
+// look at. null = not decided yet.
+let staplesOpen = null;
+
+// The tap-to-add palette of things bought over and over. Items already
+// on the list render as dimmed and inert, so the palette doubles as a
+// "what have I got so far" check.
+function renderStaplesPalette(items) {
+  const onList = new Set(items.map((item) => item.name.toLowerCase()));
+
+  return `
+    <div class="card grocery-staples">
+      <button class="grocery-staples__toggle" id="staples-toggle" aria-expanded="${staplesOpen}">
+        <span class="section-label">Staples — tap to add</span>
+        <span class="grocery-staples__chevron">${staplesOpen ? '▴' : '▾'}</span>
+      </button>
+      ${
+        staplesOpen
+          ? Object.entries(STAPLE_GROUPS)
+              .map(
+                ([group, staples]) => `
+                  <div class="grocery-staples__group">
+                    <div class="grocery-staples__group-name">${group}</div>
+                    <div class="chip-row grocery-staples__chips">
+                      ${staples
+                        .map((staple) => {
+                          const added = onList.has(staple.name.toLowerCase());
+                          return `
+                            <button class="chip grocery-staple${added ? ' grocery-staple--added' : ''}"
+                              data-staple="${escapeHTML(staple.name)}"
+                              data-staple-category="${staple.category}"
+                              ${added ? 'disabled' : ''}>
+                              ${added ? '✓ ' : '+ '}${escapeHTML(staple.name)}
+                            </button>
+                          `;
+                        })
+                        .join('')}
+                    </div>
+                  </div>
+                `
+              )
+              .join('')
+          : ''
+      }
+    </div>
+  `;
+}
+
 async function renderGroceryTab() {
   const contentEl = document.getElementById('food-tab-content');
   const items = await Storage.groceryItems.getAll();
 
   const checkedCount = items.filter((i) => i.checked).length;
+  if (staplesOpen === null) staplesOpen = items.length === 0;
 
   contentEl.innerHTML = `
+    ${renderStaplesPalette(items)}
     <button class="btn btn-primary" id="add-grocery-btn">+ Add Item</button>
     ${checkedCount > 0 ? `<button class="btn btn-secondary" id="clear-checked-btn">Clear ${checkedCount} Checked</button>` : ''}
     ${
@@ -630,6 +711,20 @@ async function renderGroceryTab() {
   `;
 
   document.getElementById('add-grocery-btn').addEventListener('click', openGroceryModal);
+
+  document.getElementById('staples-toggle').addEventListener('click', () => {
+    staplesOpen = !staplesOpen;
+    renderGroceryTab();
+  });
+
+  contentEl.querySelectorAll('[data-staple]').forEach((chip) => {
+    chip.addEventListener('click', async () => {
+      await Storage.groceryItems.save(
+        createGroceryItem({ name: chip.dataset.staple, category: chip.dataset.stapleCategory })
+      );
+      renderGroceryTab();
+    });
+  });
 
   const clearBtn = document.getElementById('clear-checked-btn');
   if (clearBtn) {

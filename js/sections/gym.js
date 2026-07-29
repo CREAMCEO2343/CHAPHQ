@@ -50,6 +50,20 @@ function formatDate(ts) {
   return new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
+// Does this workout prescribe sets and reps? Running logs don't.
+function hasTarget(workout) {
+  return workout.targetSets > 0 && workout.targetRepsLow > 0;
+}
+
+// "3 × 6–8" — the day's prescription, shown on the workout card and
+// above every exercise once training starts.
+function formatTarget(workout) {
+  if (!hasTarget(workout)) return '';
+  const { targetSets, targetRepsLow, targetRepsHigh } = workout;
+  const reps = targetRepsHigh > targetRepsLow ? `${targetRepsLow}–${targetRepsHigh}` : `${targetRepsLow}`;
+  return `${targetSets} × ${reps}`;
+}
+
 function clearTimers() {
   clearInterval(workoutTimerInterval);
   clearInterval(restTimerInterval);
@@ -102,7 +116,7 @@ async function renderHome() {
           const meta =
             w.type === 'running'
               ? `Running log · ~${w.estimatedMin} min`
-              : `${w.exercises.length} exercises · ~${w.estimatedMin} min`;
+              : `${w.exercises.length} exercises · ${formatTarget(w)} · ~${w.estimatedMin} min`;
           return `
             <div class="card gym-workout-card" data-workout-id="${w.id}">
               <div class="gym-workout-card__info">
@@ -167,6 +181,23 @@ function openWorkoutEditor(workout) {
   openModal({
     title: `Edit ${workout.name}`,
     contentHTML: `
+      <div class="section-label">Target — applies to every exercise here</div>
+      <div class="gym-editor-target">
+        <div>
+          <label class="modal-sheet__field-label" for="gym-target-sets">Sets</label>
+          <input class="input mono" type="number" inputmode="numeric" min="1" id="gym-target-sets" value="${workout.targetSets ?? ''}" />
+        </div>
+        <div>
+          <label class="modal-sheet__field-label" for="gym-target-low">Reps from</label>
+          <input class="input mono" type="number" inputmode="numeric" min="1" id="gym-target-low" value="${workout.targetRepsLow ?? ''}" />
+        </div>
+        <div>
+          <label class="modal-sheet__field-label" for="gym-target-high">to</label>
+          <input class="input mono" type="number" inputmode="numeric" min="1" id="gym-target-high" value="${workout.targetRepsHigh ?? ''}" />
+        </div>
+      </div>
+
+      <div class="section-label">Exercises</div>
       <div id="gym-editor-list">${listHTML()}</div>
       <div class="gym-editor-add">
         <input class="input" type="text" id="gym-new-exercise" placeholder="New exercise name" />
@@ -174,6 +205,20 @@ function openWorkoutEditor(workout) {
       </div>
     `,
     onOpen: (root) => {
+      // Targets save as you type — no Save button to forget to press.
+      ['gym-target-sets', 'gym-target-low', 'gym-target-high'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', async () => {
+          const read = (fieldId) => {
+            const value = document.getElementById(fieldId).value;
+            return value === '' ? null : Number(value);
+          };
+          workout.targetSets = read('gym-target-sets');
+          workout.targetRepsLow = read('gym-target-low');
+          workout.targetRepsHigh = read('gym-target-high');
+          await Storage.workouts.save(workout);
+        });
+      });
+
       const rewire = () => {
         const listEl = document.getElementById('gym-editor-list');
         listEl.innerHTML = listHTML();
@@ -239,11 +284,36 @@ function formatPrevLine(sets) {
   return sets.map((s) => `${s.weight || 0} lb × ${s.reps || 0}`).join(', ');
 }
 
+// Builds the rows you see when an exercise opens. Two different sources,
+// on purpose:
+//
+//   REPS come from the workout's target — that's the plan for today, and
+//   it's the same every session, so it's worth pre-filling. The low end
+//   of the range goes in the box (hit 6, then work up to 8); the full
+//   range is shown above it.
+//
+//   WEIGHT comes from what you actually lifted last time, because there
+//   is no sensible default weight — it's different for every exercise
+//   and climbs over time. First time through, it's blank. When a past
+//   session had fewer sets than today's target, the last weight carries
+//   down to fill the remaining rows.
+function buildSets(workout, prevSets) {
+  const count = hasTarget(workout) ? workout.targetSets : prevSets?.length || 1;
+  const targetReps = hasTarget(workout) ? workout.targetRepsLow : '';
+
+  return Array.from({ length: count }, (_, i) => {
+    const prev = prevSets ? prevSets[i] ?? prevSets[prevSets.length - 1] : null;
+    return {
+      weight: prev?.weight ?? '',
+      reps: targetReps !== '' ? targetReps : prev?.reps ?? '',
+      completed: false,
+    };
+  });
+}
+
 async function startWorkout(workout) {
   const sessions = await Storage.workoutSessions.getAll();
 
-  // Pre-fill each exercise from its previous session (auto-remember) —
-  // Liam only edits if today differs. No previous data → one blank set.
   activeSession = {
     workout,
     startedAt: Date.now(),
@@ -252,9 +322,7 @@ async function startWorkout(workout) {
       return {
         name: ex.name,
         prevSets: prev,
-        sets: prev
-          ? prev.map((s) => ({ weight: s.weight, reps: s.reps, completed: false }))
-          : [{ weight: '', reps: '', completed: false }],
+        sets: buildSets(workout, prev),
       };
     }),
   };
@@ -281,7 +349,10 @@ function renderActiveWorkout() {
       .map(
         (ex, exIndex) => `
           <div class="card gym-exercise">
-            <div class="gym-exercise__name">${escapeHTML(ex.name)}</div>
+            <div class="gym-exercise__head">
+              <div class="gym-exercise__name">${escapeHTML(ex.name)}</div>
+              ${hasTarget(s.workout) ? `<div class="gym-exercise__target mono">${formatTarget(s.workout)}</div>` : ''}
+            </div>
             ${ex.prevSets ? `<div class="gym-exercise__prev mono">${formatPrevLine(ex.prevSets)}</div>` : '<div class="gym-exercise__prev">first time — no previous data</div>'}
             <div class="gym-sets" data-ex="${exIndex}">
               ${ex.sets
@@ -291,7 +362,8 @@ function renderActiveWorkout() {
                       <span class="gym-set-num">${setIndex + 1}</span>
                       <input class="input mono" type="number" inputmode="decimal" placeholder="lb"
                         value="${set.weight}" data-w="${exIndex}-${setIndex}" />
-                      <input class="input mono" type="number" inputmode="numeric" placeholder="reps"
+                      <input class="input mono" type="number" inputmode="numeric"
+                        placeholder="${hasTarget(s.workout) ? `${s.workout.targetRepsLow}–${s.workout.targetRepsHigh}` : 'reps'}"
                         value="${set.reps}" data-r="${exIndex}-${setIndex}" />
                       <button class="checkbox-circle${set.completed ? ' checked' : ''}" data-c="${exIndex}-${setIndex}" aria-label="Set done">✓</button>
                     </div>

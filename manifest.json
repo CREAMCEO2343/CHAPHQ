@@ -1,7 +1,7 @@
 {
   "name": "CHAPHQ",
   "short_name": "CHAPHQ",
-  "description": "Personal headquarters: gym, food, investing, school, and goals.",
+  "description": "Personal headquarters: gym, food, investing, and school.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

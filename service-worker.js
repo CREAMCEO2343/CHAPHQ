@@ -11,7 +11,7 @@
 // CACHE_VERSION by 1. Bumping the version is what tells an iPhone that
 // already installed the app "hey, there's an update, refresh your cache."
 
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `chaphq-${CACHE_VERSION}`;
 
 const APP_SHELL_FILES = [
@@ -37,6 +37,8 @@ const APP_SHELL_FILES = [
   './js/components/navbar.js',
   './js/components/modal.js',
   './js/components/tabs.js',
+  './js/components/hud.js',
+  './js/components/icons.js',
   './js/sections/dashboard.js',
   './js/sections/gym.js',
   './js/sections/food.js',

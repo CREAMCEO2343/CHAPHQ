@@ -38,13 +38,17 @@
 
   /* ===== Typography =====
      The CHAPHQ font trio:
-       Space Grotesk — headers + the wordmark (--font-display)
+       Playfair Display — headers + the wordmark (--font-display). A
+                       high-contrast serif: hairline thins against heavy
+                       stems, which reads sharp and editorial next to the
+                       gold. Falls back to Georgia offline — still a
+                       serif, so headers never snap back to sans.
        Inter         — body text (--font-family)
        IBM Plex Mono — workout/portfolio data: weights, reps, durations,
                        dollar values (--font-mono)
-     Each falls back to the iOS system font when offline. */
+     Body and mono fall back to the iOS system font when offline. */
   --font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  --font-display: "Space Grotesk", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --font-display: "Playfair Display", Georgia, "Times New Roman", "Iowan Old Style", serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --text-large-title: 700 34px/41px var(--font-family);
@@ -68,7 +72,7 @@
   /* ===== Accent + semantic colors =====
      The CHAPHQ accent is gold. Success/warning/danger stay iOS-system so
      gains/losses and warnings read instantly. */
-  --color-gold: #D4AF37;
+  --color-gold: #9C7A28;
   --color-accent: var(--color-gold);
   /* Text color used ON TOP of the gold accent (buttons, active chips) —
      dark, because white-on-gold is hard to read. */
@@ -77,8 +81,15 @@
   --color-warning: #FF9500;
   --color-danger: #FF3B30;
 
-  /* Gold hairline: the thin gold border on cards (subtle by design). */
-  --hairline-gold: rgba(212, 175, 55, 0.25);
+  /* The gold as raw channels, so rules can mix their own alpha without
+     hardcoding the hex a second time. */
+  --color-gold-rgb: 156, 122, 40;
+
+  /* Gold hairline: the thin gold border on cards (subtle by design).
+     Carried at a higher alpha than the old brighter gold needed — this
+     one is darker, so the same 0.25 would have faded the hairline out
+     against the near-black background. */
+  --hairline-gold: rgba(var(--color-gold-rgb), 0.38);
 
   /* ===== Wordmark (the CHAPHQ brand mark in headers) ===== */
   --font-wordmark: var(--font-display);

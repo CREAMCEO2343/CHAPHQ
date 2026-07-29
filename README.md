@@ -66,7 +66,7 @@ service-worker.js     Offline caching. Bump CACHE_VERSION on updates.
 serve.ps1             The local dev server (PowerShell, no installs).
 css/
   variables.css       Design tokens: every color/font/spacing, incl.
-                      the dark #0A0C10 / gold #D4AF37 CHAPHQ theme.
+                      the dark #0A0C10 / gold #9C7A28 CHAPHQ theme.
   base.css            Page-wide resets and layout skeleton.
   components.css      Shared UI: cards, buttons, sheets, wordmark...
   navbar.css          The bottom tab bar.

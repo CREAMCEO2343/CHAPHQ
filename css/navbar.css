@@ -1,10 +1,10 @@
 /*
   navbar.css
   ---------------------------------------------------------------------
-  The bottom tab bar (Dashboard, Meals, Workouts, Progress, More) that's
-  always visible, plus the "More" sheet that slides up over it to reveal
-  Grocery, School, Goals, and Settings. This mirrors how Apple's own
-  App Store app handles having more sections than fit in one bar.
+  The bottom tab bar: Home, Gym, Food, Investing, School. All five
+  pillars get a permanent slot — there's no "More" sheet, because five
+  is what fits comfortably across an iPhone. Settings has no tab; it's
+  reached from the gear on the Dashboard.
 */
 
 #app-navbar {
@@ -37,9 +37,20 @@
   color: var(--color-accent);
 }
 
+/* Icons are inline SVG (js/components/icons.js) and stroke with
+   currentColor, so they inherit the tertiary/gold from .navbar__item
+   above without needing a separate "active" asset. */
 .navbar__item .icon {
-  font-size: 22px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+}
+
+.navbar__item .icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .navbar__item .label {

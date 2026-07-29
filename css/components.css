@@ -92,6 +92,17 @@
   font-size: 18px;
 }
 
+/* Variant for buttons holding an inline SVG icon rather than a glyph */
+.btn-icon--svg {
+  color: var(--color-text-secondary);
+}
+
+.btn-icon--svg svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+}
+
 /* Floating "add" button, bottom-right above the navbar */
 .fab {
   position: fixed;
@@ -401,7 +412,14 @@
 }
 
 .link-tile .icon {
-  font-size: 28px;
+  display: flex;
+  color: var(--color-accent);
+}
+
+.link-tile .icon svg {
+  width: 26px;
+  height: 26px;
+  display: block;
 }
 
 .link-tile .label {

@@ -68,6 +68,62 @@
 
 /* ===== Grocery tab ===== */
 
+/* The staples palette: tap-to-add chips for the repeat buys, grouped by
+   the way you'd think about them rather than by store aisle. */
+.grocery-staples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.grocery-staples__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-1) 0;
+}
+
+.grocery-staples__toggle .section-label {
+  padding: 0;
+}
+
+.grocery-staples__chevron {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+}
+
+.grocery-staples__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.grocery-staples__group-name {
+  font: var(--text-footnote);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* Chips wrap onto as many lines as they need — unlike the filter chip
+   row elsewhere, this one isn't a horizontal scroller. */
+.grocery-staples__chips {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+.grocery-staple {
+  border: 0.5px solid var(--hairline-gold);
+}
+
+.grocery-staple--added {
+  opacity: 0.45;
+  color: var(--color-text-tertiary);
+  border-color: var(--color-separator);
+}
+
 .grocery-row {
   cursor: pointer;
 }
@@ -152,6 +208,19 @@
   position: absolute;
   left: 0;
   color: var(--color-text-tertiary);
+}
+
+/* Optional ingredients sit back so the core recipe reads first. */
+.meals-detail__ingredient--optional {
+  color: var(--color-text-secondary);
+}
+
+.meals-detail__optional-tag {
+  font: var(--text-caption2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary);
+  margin-left: var(--space-2);
 }
 
 .meals-detail__actions {

@@ -58,6 +58,13 @@
   flex: 1;
 }
 
+/* Sets / rep-range target, three narrow fields on one line */
+.gym-editor-target {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-3);
+}
+
 /* ===== Active workout ===== */
 
 .gym-active-header {
@@ -87,9 +94,26 @@
   gap: var(--space-2);
 }
 
+.gym-exercise__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .gym-exercise__name {
   font: var(--text-headline);
   font-family: var(--font-display);
+}
+
+/* The day's prescription, e.g. "3 × 6–8" — sits opposite the exercise
+   name so the whole card reads "what to do" then "what you did last". */
+.gym-exercise__target {
+  font: var(--text-footnote);
+  font-weight: 600;
+  color: var(--color-gold);
+  white-space: nowrap;
+  flex: none;
 }
 
 /* The previous workout's numbers, right under the exercise title */

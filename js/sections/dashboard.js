@@ -14,12 +14,14 @@ import { createDailyLog } from '../data/schema.js';
 import { portfolioSummary } from '../data/prices.js';
 import { navigateTo } from '../router.js';
 import { openModal, closeModal } from '../components/modal.js';
+import { icon } from '../components/icons.js';
 
+// Same destinations as the bottom tab bar, so they use the same icons.
 const QUICK_LINKS = [
-  { id: 'gym', label: 'Gym', icon: '💪' },
-  { id: 'food', label: 'Food', icon: '🍽️' },
-  { id: 'investing', label: 'Investing', icon: '📊' },
-  { id: 'school', label: 'School', icon: '🎓' },
+  { id: 'gym', label: 'Gym', icon: 'gym' },
+  { id: 'food', label: 'Food', icon: 'food' },
+  { id: 'investing', label: 'Investing', icon: 'investing' },
+  { id: 'school', label: 'School', icon: 'school' },
 ];
 
 function todayISO() {
@@ -43,7 +45,7 @@ export function render() {
         <span class="wordmark"><span class="wordmark__chap">CHAP</span><span class="wordmark__hq">HQ</span></span>
         <div class="page-header__subtitle">${formattedToday()}</div>
       </div>
-      <button class="btn-icon" id="dashboard-settings-btn" aria-label="Settings">⚙️</button>
+      <button class="btn-icon btn-icon--svg" id="dashboard-settings-btn" aria-label="Settings">${icon('settings')}</button>
     </div>
     <div class="page-content">
       <div class="dashboard-hero" id="dashboard-hero"></div>
@@ -229,7 +231,7 @@ function renderQuickLinks() {
   linksEl.innerHTML = QUICK_LINKS.map(
     (link) => `
       <button class="link-tile" data-route="${link.id}">
-        <span class="icon">${link.icon}</span>
+        <span class="icon">${icon(link.icon)}</span>
         <span class="label">${link.label}</span>
       </button>
     `

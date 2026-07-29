@@ -7,13 +7,17 @@
 // while you're on the Settings screen.
 
 import { navigateTo, onRouteChange, getCurrentRoute } from '../router.js';
+import { icon } from './icons.js';
 
+// `icon` is a key into js/components/icons.js. The SVG inherits
+// currentColor, so the active tab's gold comes straight from
+// .navbar__item.active in navbar.css — there's no second icon set.
 const TABS = [
-  { id: 'dashboard', label: 'Home', icon: '🏠' },
-  { id: 'gym', label: 'Gym', icon: '💪' },
-  { id: 'food', label: 'Food', icon: '🍽️' },
-  { id: 'investing', label: 'Investing', icon: '📊' },
-  { id: 'school', label: 'School', icon: '🎓' },
+  { id: 'dashboard', label: 'Home', icon: 'home' },
+  { id: 'gym', label: 'Gym', icon: 'gym' },
+  { id: 'food', label: 'Food', icon: 'food' },
+  { id: 'investing', label: 'Investing', icon: 'investing' },
+  { id: 'school', label: 'School', icon: 'school' },
 ];
 
 const navEl = document.getElementById('app-navbar');
@@ -22,7 +26,7 @@ export function initNavbar() {
   navEl.innerHTML = TABS.map(
     (tab) => `
       <button class="navbar__item" data-route="${tab.id}">
-        <span class="icon">${tab.icon}</span>
+        <span class="icon">${icon(tab.icon)}</span>
         <span class="label">${tab.label}</span>
       </button>
     `
