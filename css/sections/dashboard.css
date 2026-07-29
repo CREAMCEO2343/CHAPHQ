@@ -1,0 +1,20 @@
+/* dashboard.css — styles specific to the Dashboard section. */
+
+.dashboard-gym-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.dashboard-gym-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-log-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}

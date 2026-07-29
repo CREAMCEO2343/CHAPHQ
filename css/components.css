@@ -1,0 +1,368 @@
+/*
+  components.css
+  ---------------------------------------------------------------------
+  Reusable building blocks shared by every section: page headers, cards,
+  buttons, inputs, list rows, chips, empty states, and the modal sheet.
+  A section's own stylesheet (e.g. meals.css) should only contain styles
+  specific to that section — if something looks like it'll be reused
+  elsewhere, it belongs here instead.
+*/
+
+/* ===== Page header: every section starts with one of these ===== */
+
+.page-header {
+  padding: var(--space-6) var(--space-5) var(--space-4);
+}
+
+.page-header__title {
+  font: var(--text-large-title);
+  color: var(--color-text-primary);
+}
+
+.page-header__subtitle {
+  font: var(--text-subhead);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-1);
+}
+
+.page-content {
+  padding: 0 var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.section-label {
+  font: var(--text-footnote);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+  padding: 0 var(--space-2);
+}
+
+/* ===== Card ===== */
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+/* ===== Buttons ===== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  font: var(--text-headline);
+  transition: transform var(--duration-fast) var(--ease-standard), opacity var(--duration-fast) var(--ease-standard);
+}
+
+.btn:active {
+  transform: scale(0.96);
+  opacity: 0.85;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #FFFFFF;
+  width: 100%;
+}
+
+.btn-secondary {
+  background: var(--color-surface-secondary);
+  color: var(--color-accent);
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+/* Floating "add" button, bottom-right above the navbar */
+.fab {
+  position: fixed;
+  right: calc(var(--space-5) + var(--safe-right));
+  bottom: calc(80px + var(--safe-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px var(--color-shadow);
+  z-index: 20;
+  transition: transform var(--duration-fast) var(--ease-standard);
+}
+
+.fab:active {
+  transform: scale(0.92);
+}
+
+/* ===== Inputs ===== */
+
+.input, .textarea {
+  width: 100%;
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font: var(--text-body);
+  color: var(--color-text-primary);
+}
+
+.textarea {
+  resize: none;
+  min-height: 88px;
+}
+
+.input::placeholder, .textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+}
+
+.search-bar input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font: var(--text-body);
+  color: var(--color-text-primary);
+}
+
+.search-bar .icon {
+  color: var(--color-text-tertiary);
+  font-size: 15px;
+}
+
+/* ===== Filter chips ===== */
+
+.chip-row {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+  scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-secondary);
+  font: var(--text-subhead);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.chip.active {
+  background: var(--color-accent);
+  color: #FFFFFF;
+}
+
+/* ===== List rows (grocery items, meal list, workout history, etc.) ===== */
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+}
+
+.list-row + .list-row {
+  margin-top: var(--space-2);
+}
+
+.list-row__title {
+  font: var(--text-body);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.list-row__meta {
+  font: var(--text-footnote);
+  color: var(--color-text-secondary);
+}
+
+.checkbox-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--color-separator);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-size: 13px;
+  color: transparent;
+  transition: background var(--duration-fast) var(--ease-standard), border-color var(--duration-fast) var(--ease-standard);
+}
+
+.checkbox-circle.checked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: #fff;
+}
+
+/* ===== Stat tiles (Dashboard summary cards) ===== */
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.stat-tile {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: 0 1px 3px var(--color-shadow);
+}
+
+.stat-tile__label {
+  font: var(--text-footnote);
+  color: var(--color-text-secondary);
+}
+
+.stat-tile__value {
+  font: var(--text-title2);
+  color: var(--color-text-primary);
+  margin-top: var(--space-1);
+}
+
+/* ===== Empty states ===== */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-10) var(--space-6);
+  color: var(--color-text-secondary);
+}
+
+.empty-state__icon {
+  font-size: 40px;
+  margin-bottom: var(--space-3);
+  opacity: 0.6;
+}
+
+.empty-state__title {
+  font: var(--text-headline);
+  color: var(--color-text-primary);
+}
+
+.empty-state__subtitle {
+  font: var(--text-subhead);
+  margin-top: var(--space-1);
+  max-width: 260px;
+}
+
+/* ===== Modal / bottom sheet (used for "Add ___" forms) ===== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease-standard);
+  z-index: 40;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 88vh;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: var(--space-3) var(--space-5) calc(var(--space-6) + var(--safe-bottom));
+  transform: translateY(100%);
+  transition: transform var(--duration-slow) var(--ease-standard);
+  z-index: 41;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.modal-overlay.open .modal-sheet {
+  transform: translateY(0);
+}
+
+.modal-sheet__handle {
+  width: 36px;
+  height: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-separator);
+  margin: var(--space-1) auto 0;
+}
+
+.modal-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-sheet__title {
+  font: var(--text-title3);
+}
+
+.modal-sheet__field-label {
+  font: var(--text-footnote);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-1);
+  display: block;
+}
+
+/* ===== Streak / badge pill ===== */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-secondary);
+  font: var(--text-caption1);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.badge.success { color: var(--color-success); }
+.badge.warning { color: var(--color-warning); }

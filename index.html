@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+  index.html
+  ---------------------------------------------------------------------
+  This is the ONLY html page in the whole app. Every section (Dashboard,
+  Meals, Grocery, etc.) is just JavaScript that swaps out the contents of
+  <main id="app-content"> below — nothing ever navigates to a different
+  .html file. That's what makes it feel like a native app instead of a
+  website: no page reloads, no flicker, just content sliding in and out.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+<title>Life</title>
+
+<!--
+  This tiny inline script runs immediately, before any CSS or other
+  scripts load. Its only job is: if the Settings page previously saved a
+  manual light/dark choice, apply it right away — otherwise you'd briefly
+  see the wrong theme flash on screen before the rest of the app catches up.
+-->
+<script>
+  (function () {
+    try {
+      var savedTheme = localStorage.getItem('life-app-theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    } catch (err) {}
+  })();
+</script>
+
+<!-- ===== PWA basics: lets any browser install this as an app ===== -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#000000" />
+
+<!-- ===== iOS-specific tags: Safari ignores manifest.json for a lot of this,
+     so these tags are what actually make "Add to Home Screen" look and
+     behave like a real app on an iPhone. ===== -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Life" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+
+<!-- ===== Design system + shared components (order matters: variables first) ===== -->
+<link rel="stylesheet" href="css/variables.css" />
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/components.css" />
+<link rel="stylesheet" href="css/navbar.css" />
+
+<!-- ===== Per-section stylesheets (only the active section's styles actually apply) ===== -->
+<link rel="stylesheet" href="css/sections/dashboard.css" />
+<link rel="stylesheet" href="css/sections/meals.css" />
+<link rel="stylesheet" href="css/sections/grocery.css" />
+<link rel="stylesheet" href="css/sections/workouts.css" />
+<link rel="stylesheet" href="css/sections/progress.css" />
+<link rel="stylesheet" href="css/sections/school.css" />
+<link rel="stylesheet" href="css/sections/goals.css" />
+<link rel="stylesheet" href="css/sections/settings.css" />
+</head>
+<body>
+
+  <!-- Everything a section renders goes inside here. router.js controls this. -->
+  <main id="app-content"></main>
+
+  <!-- The bottom tab bar is always visible, on every screen. navbar.js controls this. -->
+  <nav id="app-navbar"></nav>
+
+  <!-- Reusable slide-up sheet used by sections for "Add" forms etc. modal.js controls this. -->
+  <div id="app-modal-root"></div>
+
+  <!--
+    type="module" lets us use import/export between our .js files (that's
+    what makes the "one file per section" structure possible) without any
+    build step — modern browsers, including iOS Safari, support this
+    natively.
+  -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

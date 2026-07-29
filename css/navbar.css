@@ -1,0 +1,77 @@
+/*
+  navbar.css
+  ---------------------------------------------------------------------
+  The bottom tab bar (Dashboard, Meals, Workouts, Progress, More) that's
+  always visible, plus the "More" sheet that slides up over it to reveal
+  Grocery, School, Goals, and Settings. This mirrors how Apple's own
+  App Store app handles having more sections than fit in one bar.
+*/
+
+#app-navbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  background: color-mix(in srgb, var(--color-bg-elevated) 85%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 0.5px solid var(--color-separator);
+  padding-bottom: var(--safe-bottom);
+}
+
+.navbar__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-2) 0 var(--space-1);
+  color: var(--color-text-tertiary);
+  transition: color var(--duration-fast) var(--ease-standard);
+}
+
+.navbar__item.active {
+  color: var(--color-accent);
+}
+
+.navbar__item .icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.navbar__item .label {
+  font: var(--text-caption2);
+  font-weight: 500;
+}
+
+/* ===== "More" sheet: grid of remaining sections ===== */
+
+.more-sheet__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.more-sheet__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-primary);
+}
+
+.more-sheet__item .icon {
+  font-size: 28px;
+}
+
+.more-sheet__item .label {
+  font: var(--text-subhead);
+  font-weight: 600;
+}

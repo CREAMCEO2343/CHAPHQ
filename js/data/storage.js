@@ -1,0 +1,52 @@
+// storage.js
+//
+// THE FILE EVERY SECTION SHOULD IMPORT FROM — never import db.js
+// directly from a section file. This is the "front door" for all app
+// data: Storage.meals.getAll(), Storage.goals.save(goal), and so on.
+//
+// Why the indirection matters: right now, every function below is
+// backed by IndexedDB (via db.js), so everything lives only on this
+// device. When you're ready to add cloud sync later, you'll rewrite the
+// INSIDE of this file to call a web API instead — but Storage.meals.getAll()
+// will still exist, still return the same shape of data, and still work
+// the exact same way from every section's point of view. No section code
+// will need to change.
+
+import { getAll, get, put, remove } from './db.js';
+import { STORE_NAMES } from './schema.js';
+
+// Builds the standard set of functions (getAll/get/save/remove) for a
+// store, so we don't repeat the same four lines eight times below.
+function createCollection(storeName) {
+  return {
+    getAll: () => getAll(storeName),
+    get: (id) => get(storeName, id),
+    save: (record) => put(storeName, record).then(() => record),
+    remove: (id) => remove(storeName, id),
+  };
+}
+
+export const Storage = {
+  meals: createCollection(STORE_NAMES.MEALS),
+  groceryItems: createCollection(STORE_NAMES.GROCERY_ITEMS),
+  workoutRoutines: createCollection(STORE_NAMES.WORKOUT_ROUTINES),
+  exerciseLogs: createCollection(STORE_NAMES.EXERCISE_LOGS),
+  progressEntries: createCollection(STORE_NAMES.PROGRESS_ENTRIES),
+  schoolItems: createCollection(STORE_NAMES.SCHOOL_ITEMS),
+  goals: createCollection(STORE_NAMES.GOALS),
+
+  // Daily logs are keyed by date string instead of a random id, since
+  // there's only ever one per day — getByDate is the natural lookup.
+  dailyLogs: {
+    ...createCollection(STORE_NAMES.DAILY_LOGS),
+    getByDate: (date) => get(STORE_NAMES.DAILY_LOGS, date),
+  },
+
+  // Settings is a plain key/value store (theme, units, etc.) rather than
+  // a list of records, so it gets a small custom shape instead of
+  // createCollection's list-oriented one.
+  settings: {
+    get: (key) => get(STORE_NAMES.SETTINGS, key).then((record) => (record ? record.value : undefined)),
+    set: (key, value) => put(STORE_NAMES.SETTINGS, { key, value }),
+  },
+};

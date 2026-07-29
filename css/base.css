@@ -1,0 +1,82 @@
+/*
+  base.css
+  ---------------------------------------------------------------------
+  Global resets and defaults, applied once to the whole page. This is
+  where we make the app fill the screen edge-to-edge, remove default
+  browser spacing, and set up the base text styles so every section
+  starts from the same clean foundation.
+*/
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overscroll-behavior-y: none; /* stops the "rubber band" bounce feeling like a website */
+}
+
+body {
+  font: var(--text-body);
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  transition: background-color var(--duration-base) var(--ease-standard);
+  -webkit-font-smoothing: antialiased;
+  /* Prevent iOS from letting the user pinch-zoom the app UI like a webpage */
+  touch-action: manipulation;
+}
+
+h1, h2, h3, h4, p, figure {
+  margin: 0;
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+ul, ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ===== App layout skeleton ===== */
+
+#app-content {
+  padding-top: var(--safe-top);
+  /* Leave room at the bottom for the fixed navbar + iPhone home indicator */
+  padding-bottom: calc(64px + var(--safe-bottom) + var(--space-4));
+  min-height: 100%;
+}
+
+/* Simple fade+rise transition applied by router.js when a section mounts */
+.section-enter {
+  animation: section-enter var(--duration-base) var(--ease-standard);
+}
+
+@keyframes section-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,116 @@
+/*
+  variables.css
+  ---------------------------------------------------------------------
+  This file defines the app's "design tokens" — named values for every
+  color, spacing size, corner radius, shadow, and font size used
+  anywhere in the app. Every other CSS file references these instead of
+  writing raw values like "16px" or "#007AFF" directly.
+
+  Why this matters: if you later want to change the accent color or
+  make corners rounder everywhere, you change it in ONE place here
+  instead of hunting through every file.
+
+  Light/dark mode works two ways at once:
+    1. By default, it follows the iPhone's system setting automatically
+       (the `prefers-color-scheme` blocks below).
+    2. The Settings page can force one or the other by adding
+       data-theme="light" or data-theme="dark" to the <html> tag — those
+       rules are listed last so they always win over the system default.
+*/
+
+:root {
+  /* ===== Spacing scale (used for padding, gaps, margins) ===== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* ===== Corner radius scale ===== */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 999px;
+
+  /* ===== Typography ===== */
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+
+  --text-large-title: 700 34px/41px var(--font-family);
+  --text-title1: 700 28px/34px var(--font-family);
+  --text-title2: 700 22px/28px var(--font-family);
+  --text-title3: 600 20px/25px var(--font-family);
+  --text-headline: 600 17px/22px var(--font-family);
+  --text-body: 400 17px/22px var(--font-family);
+  --text-callout: 400 16px/21px var(--font-family);
+  --text-subhead: 400 15px/20px var(--font-family);
+  --text-footnote: 400 13px/18px var(--font-family);
+  --text-caption1: 400 12px/16px var(--font-family);
+  --text-caption2: 400 11px/13px var(--font-family);
+
+  /* ===== Motion ===== */
+  --ease-standard: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --duration-fast: 0.15s;
+  --duration-base: 0.25s;
+  --duration-slow: 0.4s;
+
+  /* ===== Accent + semantic colors (same in light & dark, iOS system palette) ===== */
+  --color-accent: #0A84FF;
+  --color-success: #34C759;
+  --color-warning: #FF9500;
+  --color-danger: #FF3B30;
+
+  /* ===== Safe areas (notch / home indicator on iPhone) ===== */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ===== Light mode (default) ===== */
+:root,
+:root[data-theme="light"] {
+  --color-bg: #F2F2F7;
+  --color-bg-elevated: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-secondary: #F2F2F7;
+  --color-text-primary: #000000;
+  --color-text-secondary: #6C6C70;
+  --color-text-tertiary: #AEAEB2;
+  --color-separator: rgba(60, 60, 67, 0.29);
+  --color-shadow: rgba(0, 0, 0, 0.08);
+  --color-overlay: rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Dark mode: follows system setting automatically ===== */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #000000;
+    --color-bg-elevated: #1C1C1E;
+    --color-surface: #1C1C1E;
+    --color-surface-secondary: #2C2C2E;
+    --color-text-primary: #FFFFFF;
+    --color-text-secondary: #98989D;
+    --color-text-tertiary: #636366;
+    --color-separator: rgba(84, 84, 88, 0.6);
+    --color-shadow: rgba(0, 0, 0, 0.4);
+    --color-overlay: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* ===== Manual override: Settings page sets data-theme="dark" on <html> ===== */
+:root[data-theme="dark"] {
+  --color-bg: #000000;
+  --color-bg-elevated: #1C1C1E;
+  --color-surface: #1C1C1E;
+  --color-surface-secondary: #2C2C2E;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #98989D;
+  --color-text-tertiary: #636366;
+  --color-separator: rgba(84, 84, 88, 0.6);
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-overlay: rgba(0, 0, 0, 0.6);
+}

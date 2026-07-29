@@ -1,0 +1,4 @@
+# .gitignore
+# Files listed here are ignored by Git (never saved into version history).
+# Right now nothing needs ignoring, but this file is ready for when
+# something does (e.g. a future config file with private API keys).
