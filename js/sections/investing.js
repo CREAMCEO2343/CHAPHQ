@@ -280,18 +280,30 @@ async function refreshSyncLine(holdings) {
 // One line explaining where the numbers on screen came from, and what to
 // do if they're not the numbers you wanted.
 function syncStatusText(status, holdings) {
+  // The holdings ARE the cache, so what's on them is the truth about
+  // what's on screen. Sync state can be missing (cleared storage, a
+  // restored backup, a first run after an update) while real prices are
+  // still displayed — reading the date off the holdings means the status
+  // line can't claim "no cached prices" underneath a lit-up portfolio.
+  const cachedDay =
+    holdings
+      .map((h) => h.priceDate)
+      .filter(Boolean)
+      .sort()
+      .pop() || status.tradingDay;
+
   if (!status.hasKey) {
-    return holdings.some((h) => h.lastClose != null)
+    return cachedDay
       ? 'MANUAL PRICES · ADD AN API KEY IN SETTINGS TO AUTO-UPDATE'
       : 'ADD AN ALPHA VANTAGE KEY IN SETTINGS TO AUTO-UPDATE';
   }
   if (!status.online) {
-    return status.tradingDay ? `OFFLINE · SHOWING ${status.tradingDay} CLOSES` : 'OFFLINE · NO CACHED PRICES YET';
+    return cachedDay ? `OFFLINE · SHOWING ${cachedDay} CLOSES` : 'OFFLINE · NO CACHED PRICES YET';
   }
   if (status.lastError) return status.lastError.toUpperCase();
-  if (status.tradingDay) {
+  if (cachedDay) {
     const unresolved = status.unresolved.length ? ` · ${status.unresolved.length} SYMBOL(S) NOT FOUND` : '';
-    return `CLOSES FROM ${status.tradingDay} · ${status.requestsRemaining} REQUESTS LEFT TODAY${unresolved}`;
+    return `CLOSES FROM ${cachedDay} · ${status.requestsRemaining} REQUESTS LEFT TODAY${unresolved}`;
   }
   return 'READY TO SYNC';
 }

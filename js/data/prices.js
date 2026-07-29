@@ -172,6 +172,17 @@ function classifyInformation(message) {
   return /sparingly|spreading out|per second/i.test(message) ? 'throttle' : 'limit';
 }
 
+// Alpha Vantage's daily-cap response quotes the key back at you verbatim
+// ("We have detected your API key as ABC123 and our standard API rate
+// limit is..."). The messages this module surfaces are fixed strings, so
+// that text never reaches the screen — but anything derived from an
+// error message gets scrubbed on the way out regardless, so a future
+// edit can't turn a status line into a key disclosure.
+function redactKey(text, key) {
+  if (!text || !key) return text;
+  return String(text).split(key).join('••••' + key.slice(-4));
+}
+
 // One quote. Resolves to null when the symbol is valid-looking but the
 // API has no data for it (delisted, wrong exchange, typo) — that's a
 // per-symbol problem, not a reason to abandon the whole sync.
@@ -356,7 +367,7 @@ export async function syncPrices(holdings, options = {}) {
     } else if (error.code === 'rejected') {
       state.lastError = 'Alpha Vantage rejected the request — check the API key in Settings.';
     } else {
-      state.lastError = `Could not reach Alpha Vantage (${error.message}).`;
+      state.lastError = `Could not reach Alpha Vantage (${redactKey(error.message, key)}).`;
     }
     await saveSyncState(state);
     return { ok: false, reason: error.code, fetched, updated, message: state.lastError };
