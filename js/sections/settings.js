@@ -8,7 +8,7 @@
 // index.html reads it synchronously before the first paint, so the app
 // never flashes the wrong theme while starting up.
 
-import { getApiKey, setApiKey } from '../data/prices.js';
+import { getApiKey, setApiKey, isFetchEnabled, setFetchEnabled } from '../data/prices.js';
 
 const THEME_KEY = 'liamhq-theme';
 
@@ -76,12 +76,20 @@ export function render() {
           <button class="btn btn-secondary" id="av-key-clear">Clear</button>
         </div>
         <div class="list-row__meta" id="av-key-status"></div>
-        <div class="list-row__meta">
-          The free tier allows 25 requests a day and there are 21 tickers to price,
-          so the app fetches only what's changed and skips the call entirely once
-          the day's closes are in.
-        </div>
       </div>
+
+      <div class="list-row settings-theme-row" id="fetch-device-row" role="button">
+        <div style="flex:1;">
+          <div class="list-row__title">Fetch prices on this device</div>
+          <div class="list-row__meta">
+            The 25-a-day limit belongs to the key, not the device — two devices
+            fetching would need 42. Leave this on for your main device only;
+            others show the prices they already have.
+          </div>
+        </div>
+        <div class="checkbox-circle" id="fetch-device-check">&#10003;</div>
+      </div>
+      <div class="list-row__meta" id="fetch-device-status" style="padding: 0 var(--space-2);"></div>
 
       <div class="section-label">About</div>
       <div class="card">
@@ -103,6 +111,29 @@ export function init() {
   });
 
   initApiKeyField();
+  initFetchDeviceToggle();
+}
+
+async function initFetchDeviceToggle() {
+  const row = document.getElementById('fetch-device-row');
+  const check = document.getElementById('fetch-device-check');
+  const statusEl = document.getElementById('fetch-device-status');
+  if (!row) return;
+
+  const paint = (enabled) => {
+    check.classList.toggle('checked', enabled);
+    statusEl.textContent = enabled
+      ? 'On — this device fetches daily closes automatically.'
+      : 'Off — showing cached prices. "Refresh Now" in Investing still works if you want to spend a few requests here.';
+  };
+
+  paint(await isFetchEnabled());
+
+  row.addEventListener('click', async () => {
+    const next = !(await isFetchEnabled());
+    await setFetchEnabled(next);
+    paint(next);
+  });
 }
 
 // The key is stored in IndexedDB, not in the source, so it never lands in

@@ -300,6 +300,13 @@ function syncStatusText(status, holdings) {
   if (!status.online) {
     return cachedDay ? `OFFLINE · SHOWING ${cachedDay} CLOSES` : 'OFFLINE · NO CACHED PRICES YET';
   }
+  // Secondary device: say so plainly, so frozen prices read as a setting
+  // rather than a failure.
+  if (!status.fetchEnabled) {
+    return cachedDay
+      ? `AUTO-FETCH OFF ON THIS DEVICE · SHOWING ${cachedDay} CLOSES`
+      : 'AUTO-FETCH OFF ON THIS DEVICE · NO CACHED PRICES';
+  }
   if (status.lastError) return status.lastError.toUpperCase();
   if (cachedDay) {
     const unresolved = status.unresolved.length ? ` · ${status.unresolved.length} SYMBOL(S) NOT FOUND` : '';

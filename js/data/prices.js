@@ -50,6 +50,14 @@ const ENDPOINT = 'https://www.alphavantage.co/query';
 const KEY_SETTING = 'marketData:apiKey';
 const SYNC_SETTING = 'marketData:sync';
 
+// Whether THIS device is allowed to fetch. The 25/day budget belongs to
+// the API key, but sync state is per-device — so two devices sharing a
+// key each try a full 21-request sync and together need 42. Designating
+// one device as the fetcher is what keeps the two from racing each other
+// into the daily cap. Other devices keep rendering whatever prices they
+// already have, and can still refresh on an explicit tap.
+const FETCH_ENABLED_SETTING = 'marketData:fetchOnThisDevice';
+
 // Free tier is 25/day. We stop at 24 to leave one in hand — hitting the
 // wall makes Alpha Vantage return an error for the rest of the day, and
 // a partial refresh is much better than a blocked one.
@@ -85,6 +93,18 @@ export async function getApiKey() {
 
 export async function setApiKey(key) {
   await Storage.settings.set(KEY_SETTING, (key || '').trim());
+}
+
+// Defaults to true: a single-device install is the normal case, and a
+// fresh install that quietly refused to fetch would just look broken.
+// Turn it off on the secondary device, not the primary one.
+export async function isFetchEnabled() {
+  const value = await Storage.settings.get(FETCH_ENABLED_SETTING);
+  return value !== false;
+}
+
+export async function setFetchEnabled(enabled) {
+  await Storage.settings.set(FETCH_ENABLED_SETTING, !!enabled);
 }
 
 /* =====================================================================
@@ -124,9 +144,10 @@ async function saveSyncState(state) {
 
 // What the UI needs to tell you where the numbers came from.
 export async function getSyncStatus() {
-  const [state, key] = await Promise.all([loadSyncState(), getApiKey()]);
+  const [state, key, fetchEnabled] = await Promise.all([loadSyncState(), getApiKey(), isFetchEnabled()]);
   return {
     hasKey: !!key,
+    fetchEnabled,
     tradingDay: state.tradingDay,
     lastSuccessAt: state.lastSuccessAt,
     requestsUsed: state.used,
@@ -250,7 +271,10 @@ export function applyQuote(holding, quote) {
  *
  * @param {Array}  holdings
  * @param {object} [options]
- * @param {boolean} [options.force] Re-check even if today's sync is done.
+ * @param {boolean} [options.force] Re-check even if today's sync is done,
+ *   and override this device's "don't fetch" setting. Only ever passed
+ *   from an explicit button press — deciding to spend requests is the
+ *   user's call to make, the setting just stops it happening silently.
  * @returns {Promise<{ok: boolean, reason: string, fetched: number, updated: boolean}>}
  *
  * `updated` tells the caller whether any holding actually changed, so it
@@ -261,6 +285,9 @@ export async function syncPrices(holdings, options = {}) {
 
   const key = await getApiKey();
   if (!key) return done('no-key');
+  // A secondary device shows its cached prices and stays off the wire,
+  // so the primary device gets the whole daily budget to itself.
+  if (!options.force && !(await isFetchEnabled())) return done('device-disabled');
   if (!navigator.onLine) return done('offline');
 
   const tickers = [...new Set(holdings.map((h) => h.ticker).filter(Boolean))];

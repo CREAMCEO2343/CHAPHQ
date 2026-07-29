@@ -11,7 +11,7 @@
 // CACHE_VERSION by 1. Bumping the version is what tells an iPhone that
 // already installed the app "hey, there's an update, refresh your cache."
 
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const CACHE_NAME = `chaphq-${CACHE_VERSION}`;
 
 const APP_SHELL_FILES = [

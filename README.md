@@ -131,6 +131,13 @@ knowing:
   reopening the tab costs nothing. The status line under the portfolio
   total always says where the numbers came from and how many requests
   are left.
+- **Only one device should fetch.** The daily limit belongs to the API
+  key, not the device, and each device tracks its own sync — so two of
+  them would need 42 requests against a 25 budget and the second would
+  stall halfway. In **Settings → Market Data**, leave *Fetch prices on
+  this device* **on** for your phone and turn it **off** everywhere else.
+  Secondary devices keep showing the prices they already have, and
+  "Refresh Now" still works there if you deliberately want fresh numbers.
 - Gain/loss needs a **cost basis** (price paid per share), entered per
   holding. Without it a position still shows its value and day change,
   but says "add cost basis" instead of inventing a return.
