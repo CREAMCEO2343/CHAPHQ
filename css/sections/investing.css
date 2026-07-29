@@ -1,1 +1,54 @@
-/* investing.css — styles specific to the Investing pillar. Filled in when the pillar is built. */
+/* investing.css — styles specific to the Investing pillar. */
+
+.investing-up { color: var(--color-success); }
+.investing-down { color: var(--color-danger); }
+
+.investing-summary {
+  text-align: center;
+}
+
+.investing-summary .stat-tile__value {
+  font: var(--text-title1);
+  margin-top: var(--space-1);
+}
+
+.investing-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.investing-actions .btn {
+  flex: 1;
+}
+
+.investing-holding__numbers {
+  text-align: right;
+}
+
+.investing-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.investing-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.investing-delete {
+  color: var(--color-danger);
+}
+
+.investing-note-body {
+  font: var(--text-subhead);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-2);
+  white-space: pre-wrap;
+}
+
+.hc-row--done .list-row__title {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
