@@ -1,19 +1,33 @@
 // gym.js
 //
-// The Gym pillar, in three sub-tabs:
-//   Workout — your splits (Chest/Tri, Back/Bi, ...). Tap one to open it,
-//             add/remove exercises, and log sets (reps × weight) for
-//             today. Logged sets are saved as exercise-log records.
-//   History — every past logged exercise, newest first, grouped by day.
-//   Body    — body check-ins: weight, body fat %, measurements, and a
-//             progress photo per entry.
+// The Gym module, rebuilt around one core loop:
+//   pick a workout → log sets → finish → review.
+//
+// Deliberately NOT here: graphs, achievements, recovery scores, AI
+// recommendations, badges, social features, analytics. If a feature
+// doesn't serve the core loop, it doesn't belong in this file.
+//
+// Screens (simple in-module view switching, no sub-tab bar):
+//   Home     — last completed workout + the workout cards + History and
+//              Body Stats buttons
+//   Workout  — the active session: previous numbers under each exercise,
+//              pre-filled editable sets, workout timer, rest timer
+//   Running  — the running variant: duration / distance / pace / notes
+//   History  — sessions list (date · name · duration) → session detail
+//   Body     — a plain weight log (other body fields exist in the data
+//              model but deliberately have no UI yet)
 
 import { Storage } from '../data/storage.js';
-import { createWorkoutSplit, createExerciseLog, createBodyStat } from '../data/schema.js';
+import { createWorkoutSession, createBodyStat } from '../data/schema.js';
 import { openModal, closeModal } from '../components/modal.js';
-import { initTabs } from '../components/tabs.js';
 
-let openSplitId = null; // which split is expanded in the Workout tab
+const REST_SECONDS = 90; // rest timer length after completing a set
+
+// The active session lives here while training. Timers are module-level
+// so navigating away can always clean them up.
+let activeSession = null; // { workout, startedAt, exercises: [{name, sets:[{weight, reps, completed}]}] }
+let workoutTimerInterval = null;
+let restTimerInterval = null;
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -25,383 +39,506 @@ function escapeHTML(str) {
   return div.innerHTML;
 }
 
+function formatDuration(totalSec) {
+  if (totalSec == null) return '—';
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return min >= 60 ? `${Math.floor(min / 60)}h ${min % 60}m` : `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function formatDate(ts) {
+  return new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function clearTimers() {
+  clearInterval(workoutTimerInterval);
+  clearInterval(restTimerInterval);
+  workoutTimerInterval = null;
+  restTimerInterval = null;
+  document.getElementById('gym-rest-banner')?.remove();
+}
+
 export function render() {
+  // Leaving and re-entering the section always resets to Home.
+  activeSession = null;
+  clearTimers();
   return `
     <div class="page-header">
       <div class="page-header__title">Gym</div>
     </div>
-    <div class="page-content">
-      <div id="gym-tabs"></div>
-      <div id="gym-tab-content"></div>
-    </div>
+    <div class="page-content" id="gym-content"></div>
   `;
 }
 
 export function init() {
-  initTabs({
-    containerId: 'gym-tabs',
-    tabs: [
-      { id: 'workout', label: 'Workout' },
-      { id: 'history', label: 'History' },
-      { id: 'body', label: 'Body' },
-    ],
-    onChange: (tabId) => {
-      openSplitId = null;
-      if (tabId === 'workout') renderWorkoutTab();
-      if (tabId === 'history') renderHistoryTab();
-      if (tabId === 'body') renderBodyTab();
-    },
-  });
+  renderHome();
 }
 
 /* =====================================================================
-   WORKOUT TAB
+   HOME
    ===================================================================== */
 
-async function renderWorkoutTab() {
-  const contentEl = document.getElementById('gym-tab-content');
-  const splits = await Storage.workoutSplits.getAll();
-  splits.sort((a, b) => a.createdAt - b.createdAt);
-
-  if (openSplitId) {
-    const split = splits.find((s) => s.id === openSplitId);
-    if (split) return renderSplitDetail(split);
-    openSplitId = null;
-  }
+async function renderHome() {
+  clearTimers();
+  const contentEl = document.getElementById('gym-content');
+  const [workouts, sessions] = await Promise.all([Storage.workouts.getAll(), Storage.workoutSessions.getAll()]);
+  workouts.sort((a, b) => (a.order || 99) - (b.order || 99));
+  const lastSession = sessions.sort((a, b) => b.createdAt - a.createdAt)[0];
 
   contentEl.innerHTML = `
-    <div class="gym-split-list">
-      ${splits
-        .map(
-          (split) => `
-            <button class="card gym-split-card" data-split-id="${split.id}">
-              <span class="gym-split-card__icon">${split.icon}</span>
-              <span class="gym-split-card__name">${escapeHTML(split.name)}</span>
-              <span class="list-row__meta">${split.exercises.length} exercise${split.exercises.length === 1 ? '' : 's'}</span>
-            </button>
-          `
-        )
-        .join('')}
-    </div>
-  `;
-
-  contentEl.querySelectorAll('[data-split-id]').forEach((card) => {
-    card.addEventListener('click', () => {
-      openSplitId = card.dataset.splitId;
-      renderWorkoutTab();
-    });
-  });
-}
-
-async function renderSplitDetail(split) {
-  const contentEl = document.getElementById('gym-tab-content');
-  const todaysLogs = (await Storage.exerciseLogs.getAll()).filter(
-    (log) => log.splitId === split.id && log.date === todayISO()
-  );
-
-  contentEl.innerHTML = `
-    <button class="btn btn-secondary" id="split-back-btn">&larr; All splits</button>
-    <div class="gym-split-header">
-      <span class="gym-split-card__icon">${split.icon}</span>
-      <h2 class="gym-split-card__name">${escapeHTML(split.name)}</h2>
-    </div>
-
     ${
-      split.exercises.length === 0
-        ? `<div class="empty-state">
-             <div class="empty-state__icon">🏋️</div>
-             <div class="empty-state__title">No exercises yet</div>
-             <div class="empty-state__subtitle">Add the exercises you do on this day.</div>
+      lastSession
+        ? `<div class="card gym-last">
+             <div class="stat-tile__label">Last workout</div>
+             <div class="list-row__title">${escapeHTML(lastSession.workoutName)}</div>
+             <div class="list-row__meta mono">${formatDate(lastSession.createdAt)} · ${formatDuration(lastSession.durationSec)}</div>
            </div>`
-        : `<div id="split-exercise-list">
-             ${split.exercises
-               .map((exercise, index) => {
-                 const loggedToday = todaysLogs.find((l) => l.exerciseName === exercise.name);
-                 return `
-                   <div class="list-row" data-exercise-index="${index}">
-                     <div style="flex:1;">
-                       <div class="list-row__title">${escapeHTML(exercise.name)}</div>
-                       <div class="list-row__meta">
-                         Target: ${exercise.targetSets} × ${exercise.targetReps}
-                         ${loggedToday ? ` · ✅ ${loggedToday.sets.length} sets logged today` : ''}
-                       </div>
-                     </div>
-                     <button class="btn-icon" data-log-index="${index}" aria-label="Log sets">＋</button>
-                   </div>
-                 `;
-               })
-               .join('')}
-           </div>`
+        : ''
     }
 
-    <button class="btn btn-secondary" id="add-exercise-btn">+ Add Exercise</button>
+    <div class="gym-card-list">
+      ${workouts
+        .map((w) => {
+          const meta =
+            w.type === 'running'
+              ? `Running log · ~${w.estimatedMin} min`
+              : `${w.exercises.length} exercises · ~${w.estimatedMin} min`;
+          return `
+            <div class="card gym-workout-card" data-workout-id="${w.id}">
+              <div class="gym-workout-card__info">
+                <div class="gym-workout-card__name">${escapeHTML(w.name)}</div>
+                <div class="list-row__meta">${meta}</div>
+                <div class="list-row__meta">${w.lastCompletedAt ? 'Last: ' + formatDate(w.lastCompletedAt) : 'Not completed yet'}</div>
+              </div>
+              <div class="gym-workout-card__actions">
+                <button class="btn btn-primary gym-start-btn" data-start="${w.id}">Start Workout</button>
+                ${w.type === 'lifting' ? `<button class="btn btn-secondary gym-edit-btn" data-edit="${w.id}">Edit</button>` : ''}
+              </div>
+            </div>
+          `;
+        })
+        .join('')}
+    </div>
+
+    <div class="gym-home-links">
+      <button class="btn btn-secondary" id="gym-history-btn">History</button>
+      <button class="btn btn-secondary" id="gym-body-btn">Body Stats</button>
+    </div>
   `;
 
-  document.getElementById('split-back-btn').addEventListener('click', () => {
-    openSplitId = null;
-    renderWorkoutTab();
-  });
-
-  document.getElementById('add-exercise-btn').addEventListener('click', () => openExerciseFormModal(split));
-
-  contentEl.querySelectorAll('[data-log-index]').forEach((btn) => {
-    btn.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const exercise = split.exercises[Number(btn.dataset.logIndex)];
-      openLogSetsModal(split, exercise);
+  contentEl.querySelectorAll('[data-start]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const workout = workouts.find((w) => w.id === btn.dataset.start);
+      if (workout.type === 'running') startRunning(workout);
+      else startWorkout(workout);
     });
   });
 
-  // Long-press... is complex; keep it simple: tapping the row (not the +)
-  // opens an edit sheet where the exercise can be changed or deleted.
-  contentEl.querySelectorAll('[data-exercise-index]').forEach((row) => {
-    row.addEventListener('click', (event) => {
-      if (event.target.closest('[data-log-index]')) return;
-      const index = Number(row.dataset.exerciseIndex);
-      openExerciseFormModal(split, index);
+  contentEl.querySelectorAll('[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const workout = workouts.find((w) => w.id === btn.dataset.edit);
+      openWorkoutEditor(workout);
     });
   });
+
+  document.getElementById('gym-history-btn').addEventListener('click', renderHistory);
+  document.getElementById('gym-body-btn').addEventListener('click', renderBody);
 }
 
-// Add a new exercise (no index) or edit/delete an existing one (with index).
-function openExerciseFormModal(split, index = null) {
-  const isEdit = index !== null;
-  const exercise = isEdit ? split.exercises[index] : { name: '', targetSets: 3, targetReps: 10 };
+/* =====================================================================
+   WORKOUT EDITOR — add / remove / reorder exercises
+   ===================================================================== */
 
-  openModal({
-    title: isEdit ? 'Edit Exercise' : 'Add Exercise',
-    contentHTML: `
-      <form id="exercise-form" class="gym-form">
-        <div>
-          <label class="modal-sheet__field-label" for="exercise-name">Exercise name</label>
-          <input class="input" type="text" id="exercise-name" value="${escapeHTML(exercise.name)}" placeholder="e.g. Bench Press" required />
-        </div>
-        <div class="gym-form__row">
-          <div>
-            <label class="modal-sheet__field-label" for="exercise-sets">Target sets</label>
-            <input class="input" type="number" inputmode="numeric" id="exercise-sets" value="${exercise.targetSets}" min="1" />
-          </div>
-          <div>
-            <label class="modal-sheet__field-label" for="exercise-reps">Target reps</label>
-            <input class="input" type="number" inputmode="numeric" id="exercise-reps" value="${exercise.targetReps}" min="1" />
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary">${isEdit ? 'Save Changes' : 'Add Exercise'}</button>
-        ${isEdit ? '<button type="button" class="btn btn-secondary gym-form__delete" id="exercise-delete-btn">Delete Exercise</button>' : ''}
-      </form>
-    `,
-    onOpen: () => {
-      document.getElementById('exercise-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const updated = {
-          name: document.getElementById('exercise-name').value.trim(),
-          targetSets: Number(document.getElementById('exercise-sets').value) || 3,
-          targetReps: Number(document.getElementById('exercise-reps').value) || 10,
-        };
-        if (isEdit) {
-          split.exercises[index] = updated;
-        } else {
-          split.exercises.push(updated);
-        }
-        await Storage.workoutSplits.save(split);
-        renderWorkoutTab();
-        closeModal();
-      });
-
-      if (isEdit) {
-        document.getElementById('exercise-delete-btn').addEventListener('click', async () => {
-          split.exercises.splice(index, 1);
-          await Storage.workoutSplits.save(split);
-          renderWorkoutTab();
-          closeModal();
-        });
-      }
-    },
-  });
-}
-
-// Log today's sets for one exercise: a growing list of reps × weight rows.
-function openLogSetsModal(split, exercise) {
-  let sets = [{ reps: exercise.targetReps, weight: '' }];
-
-  const setsRowsHTML = () =>
-    sets
+function openWorkoutEditor(workout) {
+  const listHTML = () =>
+    workout.exercises
       .map(
-        (set, i) => `
-          <div class="gym-form__row gym-set-row">
-            <div>
-              <label class="modal-sheet__field-label">Set ${i + 1} — reps</label>
-              <input class="input" type="number" inputmode="numeric" data-set-reps="${i}" value="${set.reps}" />
-            </div>
-            <div>
-              <label class="modal-sheet__field-label">Weight (lb)</label>
-              <input class="input" type="number" inputmode="decimal" data-set-weight="${i}" value="${set.weight}" placeholder="0" />
-            </div>
+        (ex, i) => `
+          <div class="list-row gym-editor-row">
+            <div class="list-row__title">${escapeHTML(ex.name)}</div>
+            <button class="btn-icon" data-move-up="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">↑</button>
+            <button class="btn-icon" data-move-down="${i}" ${i === workout.exercises.length - 1 ? 'disabled' : ''} aria-label="Move down">↓</button>
+            <button class="btn-icon" data-remove-ex="${i}" aria-label="Remove">✕</button>
           </div>
         `
       )
       .join('');
 
   openModal({
-    title: `Log: ${exercise.name}`,
+    title: `Edit ${workout.name}`,
     contentHTML: `
-      <form id="log-sets-form" class="gym-form">
-        <div id="log-sets-rows">${setsRowsHTML()}</div>
-        <button type="button" class="btn btn-secondary" id="add-set-btn">+ Add Set</button>
-        <button type="submit" class="btn btn-primary">Save Workout</button>
-      </form>
+      <div id="gym-editor-list">${listHTML()}</div>
+      <div class="gym-editor-add">
+        <input class="input" type="text" id="gym-new-exercise" placeholder="New exercise name" />
+        <button class="btn btn-secondary" id="gym-add-exercise-btn">Add</button>
+      </div>
     `,
-    onOpen: () => {
-      const readSetsFromInputs = () => {
-        sets = sets.map((_, i) => ({
-          reps: document.querySelector(`[data-set-reps="${i}"]`).value,
-          weight: document.querySelector(`[data-set-weight="${i}"]`).value,
-        }));
+    onOpen: (root) => {
+      const rewire = () => {
+        const listEl = document.getElementById('gym-editor-list');
+        listEl.innerHTML = listHTML();
+
+        listEl.querySelectorAll('[data-move-up]').forEach((b) =>
+          b.addEventListener('click', async () => {
+            const i = Number(b.dataset.moveUp);
+            [workout.exercises[i - 1], workout.exercises[i]] = [workout.exercises[i], workout.exercises[i - 1]];
+            await Storage.workouts.save(workout);
+            rewire();
+          })
+        );
+        listEl.querySelectorAll('[data-move-down]').forEach((b) =>
+          b.addEventListener('click', async () => {
+            const i = Number(b.dataset.moveDown);
+            [workout.exercises[i + 1], workout.exercises[i]] = [workout.exercises[i], workout.exercises[i + 1]];
+            await Storage.workouts.save(workout);
+            rewire();
+          })
+        );
+        listEl.querySelectorAll('[data-remove-ex]').forEach((b) =>
+          b.addEventListener('click', async () => {
+            workout.exercises.splice(Number(b.dataset.removeEx), 1);
+            await Storage.workouts.save(workout);
+            rewire();
+          })
+        );
       };
+      rewire();
 
-      document.getElementById('add-set-btn').addEventListener('click', () => {
-        readSetsFromInputs();
-        const last = sets[sets.length - 1];
-        sets.push({ reps: last.reps, weight: last.weight }); // pre-fill from previous set
-        document.getElementById('log-sets-rows').innerHTML = setsRowsHTML();
-      });
-
-      document.getElementById('log-sets-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        readSetsFromInputs();
-        const cleanSets = sets
-          .filter((s) => s.reps !== '')
-          .map((s) => ({ reps: Number(s.reps), weight: s.weight === '' ? 0 : Number(s.weight) }));
-
-        if (cleanSets.length > 0) {
-          await Storage.exerciseLogs.save(
-            createExerciseLog({ splitId: split.id, exerciseName: exercise.name, sets: cleanSets })
-          );
-        }
-        renderWorkoutTab();
-        closeModal();
+      document.getElementById('gym-add-exercise-btn').addEventListener('click', async () => {
+        const input = document.getElementById('gym-new-exercise');
+        const name = input.value.trim();
+        if (!name) return;
+        workout.exercises.push({ name });
+        await Storage.workouts.save(workout);
+        input.value = '';
+        rewire();
       });
     },
+    onClose: () => renderHome(),
   });
 }
 
 /* =====================================================================
-   HISTORY TAB
+   ACTIVE WORKOUT (lifting)
    ===================================================================== */
 
-async function renderHistoryTab() {
-  const contentEl = document.getElementById('gym-tab-content');
-  const logs = await Storage.exerciseLogs.getAll();
-
-  if (logs.length === 0) {
-    contentEl.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-state__icon">📜</div>
-        <div class="empty-state__title">No workouts logged yet</div>
-        <div class="empty-state__subtitle">Log sets from the Workout tab and they'll show up here.</div>
-      </div>
-    `;
-    return;
+// The most recent session containing this exercise, for the "previous"
+// line and for pre-filling today's sets.
+function findPreviousSets(sessions, exerciseName) {
+  const withExercise = sessions
+    .filter((s) => s.type === 'lifting')
+    .sort((a, b) => b.createdAt - a.createdAt);
+  for (const session of withExercise) {
+    const match = session.exercises.find((e) => e.name === exerciseName);
+    if (match && match.sets.length) return match.sets;
   }
-
-  // Group logs by date, newest date first.
-  const byDate = {};
-  logs.forEach((log) => {
-    (byDate[log.date] = byDate[log.date] || []).push(log);
-  });
-  const dates = Object.keys(byDate).sort().reverse();
-
-  // Each exercise shows as a one-line summary ("4 sets · 185 lb avg") to
-  // keep the list scannable; tapping a row expands it to show every set.
-  contentEl.innerHTML = dates
-    .map((date) => {
-      const dayLogs = byDate[date].sort((a, b) => a.createdAt - b.createdAt);
-      return `
-        <div class="section-label">${new Date(date + 'T12:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-        ${dayLogs
-          .map(
-            (log) => `
-              <div class="list-row gym-history-row" data-log-id="${log.id}" role="button" aria-expanded="false">
-                <div style="flex:1;">
-                  <div class="list-row__title">${escapeHTML(log.exerciseName)}</div>
-                  <div class="list-row__meta">${setsSummary(log.sets)}</div>
-                  <div class="gym-history-row__sets" hidden>
-                    ${log.sets.map((s, i) => `<div class="list-row__meta">Set ${i + 1}: ${s.reps} reps × ${s.weight} lb</div>`).join('')}
-                  </div>
-                </div>
-                <span class="gym-history-row__chevron">›</span>
-              </div>
-            `
-          )
-          .join('')}
-      `;
-    })
-    .join('');
-
-  contentEl.querySelectorAll('.gym-history-row').forEach((row) => {
-    row.addEventListener('click', () => {
-      const detail = row.querySelector('.gym-history-row__sets');
-      detail.hidden = !detail.hidden;
-      row.classList.toggle('expanded', !detail.hidden);
-      row.setAttribute('aria-expanded', String(!detail.hidden));
-    });
-  });
+  return null;
 }
 
-// "4 sets · 185 lb avg" (weight part left off for bodyweight/cardio sets)
-function setsSummary(sets) {
-  const count = `${sets.length} set${sets.length === 1 ? '' : 's'}`;
-  const weights = sets.map((s) => Number(s.weight) || 0).filter((w) => w > 0);
-  if (weights.length === 0) return count;
-  const avg = Math.round(weights.reduce((a, b) => a + b, 0) / weights.length);
-  return `${count} · ${avg} lb avg`;
+function formatPrevLine(sets) {
+  return sets.map((s) => `${s.weight || 0} lb × ${s.reps || 0}`).join(', ');
 }
 
-/* =====================================================================
-   BODY TAB
-   ===================================================================== */
+async function startWorkout(workout) {
+  const sessions = await Storage.workoutSessions.getAll();
 
-async function renderBodyTab() {
-  const contentEl = document.getElementById('gym-tab-content');
-  const entries = (await Storage.bodyStats.getAll()).sort((a, b) => b.createdAt - a.createdAt);
-  const latest = entries[0];
+  // Pre-fill each exercise from its previous session (auto-remember) —
+  // Liam only edits if today differs. No previous data → one blank set.
+  activeSession = {
+    workout,
+    startedAt: Date.now(),
+    exercises: workout.exercises.map((ex) => {
+      const prev = findPreviousSets(sessions, ex.name);
+      return {
+        name: ex.name,
+        prevSets: prev,
+        sets: prev
+          ? prev.map((s) => ({ weight: s.weight, reps: s.reps, completed: false }))
+          : [{ weight: '', reps: '', completed: false }],
+      };
+    }),
+  };
+
+  renderActiveWorkout();
+  workoutTimerInterval = setInterval(() => {
+    const el = document.getElementById('gym-workout-timer');
+    if (el) el.textContent = formatDuration(Math.floor((Date.now() - activeSession.startedAt) / 1000));
+  }, 1000);
+}
+
+function renderActiveWorkout() {
+  const contentEl = document.getElementById('gym-content');
+  const s = activeSession;
 
   contentEl.innerHTML = `
-    <div class="stat-grid">
-      <div class="stat-tile">
-        <div class="stat-tile__label">Weight</div>
-        <div class="stat-tile__value">${latest?.weight != null ? latest.weight + 'lb' : '—'}</div>
-      </div>
-      <div class="stat-tile">
-        <div class="stat-tile__label">Body Fat</div>
-        <div class="stat-tile__value">${latest?.bodyFatPercent != null ? latest.bodyFatPercent + '%' : '—'}</div>
-      </div>
+    <div class="gym-active-header">
+      <button class="btn btn-secondary" id="gym-cancel-btn">✕ Cancel</button>
+      <div class="gym-active-title">${escapeHTML(s.workout.name)}</div>
+      <div class="gym-timer mono" id="gym-workout-timer">0:00</div>
     </div>
-    <button class="btn btn-primary" id="add-bodystat-btn">+ New Check-in</button>
-    ${
-      entries.length === 0
-        ? `<div class="empty-state">
-             <div class="empty-state__icon">📸</div>
-             <div class="empty-state__title">No check-ins yet</div>
-             <div class="empty-state__subtitle">Record weight, body fat, measurements, and a progress photo.</div>
-           </div>`
-        : entries
-            .map(
-              (entry) => `
-                <div class="list-row">
-                  ${entry.photo ? `<img class="gym-body-thumb" src="${URL.createObjectURL(entry.photo)}" alt="" />` : ''}
-                  <div style="flex:1;">
-                    <div class="list-row__title">${entry.date}</div>
-                    <div class="list-row__meta">
-                      ${[
-                        entry.weight != null ? entry.weight + 'lb' : null,
-                        entry.bodyFatPercent != null ? entry.bodyFatPercent + '% bf' : null,
-                        ...Object.entries(entry.measurements || {}).map(([k, v]) => `${k}: ${v}"`),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || 'No numbers recorded'}
+
+    ${s.exercises
+      .map(
+        (ex, exIndex) => `
+          <div class="card gym-exercise">
+            <div class="gym-exercise__name">${escapeHTML(ex.name)}</div>
+            ${ex.prevSets ? `<div class="gym-exercise__prev mono">${formatPrevLine(ex.prevSets)}</div>` : '<div class="gym-exercise__prev">first time — no previous data</div>'}
+            <div class="gym-sets" data-ex="${exIndex}">
+              ${ex.sets
+                .map(
+                  (set, setIndex) => `
+                    <div class="gym-set-row">
+                      <span class="gym-set-num">${setIndex + 1}</span>
+                      <input class="input mono" type="number" inputmode="decimal" placeholder="lb"
+                        value="${set.weight}" data-w="${exIndex}-${setIndex}" />
+                      <input class="input mono" type="number" inputmode="numeric" placeholder="reps"
+                        value="${set.reps}" data-r="${exIndex}-${setIndex}" />
+                      <button class="checkbox-circle${set.completed ? ' checked' : ''}" data-c="${exIndex}-${setIndex}" aria-label="Set done">✓</button>
                     </div>
+                  `
+                )
+                .join('')}
+            </div>
+            <button class="btn btn-secondary gym-add-set" data-add-set="${exIndex}">+ Add Set</button>
+          </div>
+        `
+      )
+      .join('')}
+
+    <button class="btn btn-primary" id="gym-finish-btn">Finish Workout</button>
+  `;
+
+  document.getElementById('gym-cancel-btn').addEventListener('click', () => {
+    if (confirm('Discard this workout?')) {
+      activeSession = null;
+      renderHome();
+    }
+  });
+
+  // Inputs write straight into the session object so re-renders keep state.
+  contentEl.querySelectorAll('[data-w]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const [ei, si] = input.dataset.w.split('-').map(Number);
+      s.exercises[ei].sets[si].weight = input.value;
+    });
+  });
+  contentEl.querySelectorAll('[data-r]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const [ei, si] = input.dataset.r.split('-').map(Number);
+      s.exercises[ei].sets[si].reps = input.value;
+    });
+  });
+
+  contentEl.querySelectorAll('[data-c]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const [ei, si] = btn.dataset.c.split('-').map(Number);
+      const set = s.exercises[ei].sets[si];
+      set.completed = !set.completed;
+      btn.classList.toggle('checked', set.completed);
+      if (set.completed) startRestTimer();
+    });
+  });
+
+  contentEl.querySelectorAll('[data-add-set]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const ei = Number(btn.dataset.addSet);
+      const sets = s.exercises[ei].sets;
+      const last = sets[sets.length - 1];
+      sets.push({ weight: last?.weight ?? '', reps: last?.reps ?? '', completed: false });
+      renderActiveWorkout(); // re-render keeps all state (it lives in activeSession)
+    });
+  });
+
+  document.getElementById('gym-finish-btn').addEventListener('click', finishWorkout);
+}
+
+// Automatic, dismissible rest countdown after completing a set.
+function startRestTimer() {
+  clearInterval(restTimerInterval);
+  document.getElementById('gym-rest-banner')?.remove();
+
+  let remaining = REST_SECONDS;
+  const banner = document.createElement('div');
+  banner.id = 'gym-rest-banner';
+  banner.className = 'gym-rest-banner';
+  banner.innerHTML = `<span>Rest</span><span class="mono" id="gym-rest-time">${formatDuration(remaining)}</span><button class="btn-icon" id="gym-rest-dismiss" aria-label="Dismiss">✕</button>`;
+  document.body.appendChild(banner);
+
+  banner.querySelector('#gym-rest-dismiss').addEventListener('click', () => {
+    clearInterval(restTimerInterval);
+    banner.remove();
+  });
+
+  restTimerInterval = setInterval(() => {
+    remaining -= 1;
+    const el = document.getElementById('gym-rest-time');
+    if (el) el.textContent = formatDuration(Math.max(remaining, 0));
+    if (remaining <= 0) {
+      clearInterval(restTimerInterval);
+      banner.remove();
+    }
+  }, 1000);
+}
+
+async function finishWorkout() {
+  const s = activeSession;
+  const durationSec = Math.floor((Date.now() - s.startedAt) / 1000);
+
+  // Keep sets that were completed or at least have data typed in.
+  const exercises = s.exercises
+    .map((ex) => ({
+      name: ex.name,
+      sets: ex.sets
+        .filter((set) => set.completed || set.weight !== '' || set.reps !== '')
+        .map((set) => ({ weight: Number(set.weight) || 0, reps: Number(set.reps) || 0, completed: set.completed })),
+    }))
+    .filter((ex) => ex.sets.length > 0);
+
+  const completedSets = exercises.reduce((n, ex) => n + ex.sets.filter((x) => x.completed).length, 0);
+  const exercisesCompleted = exercises.filter((ex) => ex.sets.some((x) => x.completed)).length;
+
+  await Storage.workoutSessions.save(
+    createWorkoutSession({
+      workoutId: s.workout.id,
+      workoutName: s.workout.name,
+      type: 'lifting',
+      durationSec,
+      exercises,
+    })
+  );
+  await Storage.workouts.save({ ...s.workout, lastCompletedAt: Date.now() });
+
+  // Finishing a workout also flips the Dashboard's "Workout ✅" for today.
+  const daily = (await Storage.dailyLogs.getByDate(todayISO())) || { date: todayISO(), waterMl: null, weight: null };
+  await Storage.dailyLogs.save({ ...daily, gymCompleted: true });
+
+  activeSession = null;
+  clearTimers();
+
+  // Plain summary — duration, exercises, sets. No confetti.
+  openModal({
+    title: 'Workout Complete',
+    contentHTML: `
+      <div class="gym-summary">
+        <div class="stat-grid">
+          <div class="stat-tile"><div class="stat-tile__label">Duration</div><div class="stat-tile__value">${formatDuration(durationSec)}</div></div>
+          <div class="stat-tile"><div class="stat-tile__label">Exercises</div><div class="stat-tile__value">${exercisesCompleted}</div></div>
+        </div>
+        <div class="stat-tile"><div class="stat-tile__label">Total Sets</div><div class="stat-tile__value">${completedSets}</div></div>
+      </div>
+    `,
+    onClose: () => renderHome(),
+  });
+}
+
+/* =====================================================================
+   RUNNING
+   ===================================================================== */
+
+async function startRunning(workout) {
+  const contentEl = document.getElementById('gym-content');
+  const sessions = await Storage.workoutSessions.getAll();
+  const lastRun = sessions.filter((x) => x.type === 'running').sort((a, b) => b.createdAt - a.createdAt)[0];
+
+  contentEl.innerHTML = `
+    <div class="gym-active-header">
+      <button class="btn btn-secondary" id="gym-cancel-btn">✕ Cancel</button>
+      <div class="gym-active-title">Running</div>
+    </div>
+
+    ${
+      lastRun?.running
+        ? `<div class="card gym-last">
+             <div class="stat-tile__label">Last run</div>
+             <div class="list-row__meta mono">
+               ${lastRun.running.durationMin} min
+               ${lastRun.running.distanceMi ? ' · ' + lastRun.running.distanceMi + ' mi' : ''}
+               ${lastRun.running.pace ? ' · ' + escapeHTML(lastRun.running.pace) : ''}
+             </div>
+           </div>`
+        : ''
+    }
+
+    <form id="gym-run-form" class="gym-form">
+      <div>
+        <label class="modal-sheet__field-label" for="run-duration">Duration (minutes)</label>
+        <input class="input mono" type="number" inputmode="decimal" id="run-duration" placeholder="30" required />
+      </div>
+      <div class="gym-form__row">
+        <div>
+          <label class="modal-sheet__field-label" for="run-distance">Distance (mi, optional)</label>
+          <input class="input mono" type="number" inputmode="decimal" step="any" id="run-distance" />
+        </div>
+        <div>
+          <label class="modal-sheet__field-label" for="run-pace">Avg pace (optional)</label>
+          <input class="input mono" type="text" id="run-pace" placeholder="9:30 /mi" />
+        </div>
+      </div>
+      <div>
+        <label class="modal-sheet__field-label" for="run-notes">Notes (optional)</label>
+        <textarea class="textarea" id="run-notes"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary">Finish Run</button>
+    </form>
+  `;
+
+  document.getElementById('gym-cancel-btn').addEventListener('click', renderHome);
+
+  document.getElementById('gym-run-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const durationMin = Number(document.getElementById('run-duration').value);
+    const distance = document.getElementById('run-distance').value;
+
+    await Storage.workoutSessions.save(
+      createWorkoutSession({
+        workoutId: workout.id,
+        workoutName: workout.name,
+        type: 'running',
+        durationSec: Math.round(durationMin * 60),
+        running: {
+          durationMin,
+          distanceMi: distance === '' ? null : Number(distance),
+          pace: document.getElementById('run-pace').value.trim() || null,
+          notes: document.getElementById('run-notes').value.trim() || null,
+        },
+      })
+    );
+    await Storage.workouts.save({ ...workout, lastCompletedAt: Date.now() });
+
+    const daily = (await Storage.dailyLogs.getByDate(todayISO())) || { date: todayISO(), waterMl: null, weight: null };
+    await Storage.dailyLogs.save({ ...daily, gymCompleted: true });
+
+    renderHome();
+  });
+}
+
+/* =====================================================================
+   HISTORY
+   ===================================================================== */
+
+async function renderHistory() {
+  const contentEl = document.getElementById('gym-content');
+  const sessions = (await Storage.workoutSessions.getAll()).sort((a, b) => b.createdAt - a.createdAt);
+
+  contentEl.innerHTML = `
+    <button class="btn btn-secondary" id="gym-back-btn">&larr; Gym</button>
+    <div class="section-label">History</div>
+    ${
+      sessions.length === 0
+        ? `<div class="empty-state">
+             <div class="empty-state__icon">📜</div>
+             <div class="empty-state__title">No workouts yet</div>
+             <div class="empty-state__subtitle">Finished workouts appear here: date, workout, duration.</div>
+           </div>`
+        : sessions
+            .map(
+              (session) => `
+                <div class="list-row" data-session-id="${session.id}" style="cursor:pointer;">
+                  <div style="flex:1;">
+                    <div class="list-row__title">${escapeHTML(session.workoutName)}</div>
+                    <div class="list-row__meta">${formatDate(session.createdAt)}</div>
                   </div>
+                  <span class="list-row__meta mono">${formatDuration(session.durationSec)}</span>
                 </div>
               `
             )
@@ -409,64 +546,100 @@ async function renderBodyTab() {
     }
   `;
 
-  document.getElementById('add-bodystat-btn').addEventListener('click', openBodyStatModal);
+  document.getElementById('gym-back-btn').addEventListener('click', renderHome);
+
+  contentEl.querySelectorAll('[data-session-id]').forEach((row) => {
+    row.addEventListener('click', () => {
+      const session = sessions.find((x) => x.id === row.dataset.sessionId);
+      if (session) renderHistoryDetail(session);
+    });
+  });
 }
 
-function openBodyStatModal() {
-  openModal({
-    title: 'New Check-in',
-    contentHTML: `
-      <form id="bodystat-form" class="gym-form">
-        <div class="gym-form__row">
-          <div>
-            <label class="modal-sheet__field-label" for="bs-weight">Weight (lb)</label>
-            <input class="input" type="number" inputmode="decimal" id="bs-weight" placeholder="0" />
-          </div>
-          <div>
-            <label class="modal-sheet__field-label" for="bs-bf">Body fat (%)</label>
-            <input class="input" type="number" inputmode="decimal" id="bs-bf" placeholder="0" />
-          </div>
-        </div>
-        <div class="gym-form__row">
-          <div>
-            <label class="modal-sheet__field-label" for="bs-waist">Waist (in)</label>
-            <input class="input" type="number" inputmode="decimal" id="bs-waist" placeholder="0" />
-          </div>
-          <div>
-            <label class="modal-sheet__field-label" for="bs-chest">Chest (in)</label>
-            <input class="input" type="number" inputmode="decimal" id="bs-chest" placeholder="0" />
-          </div>
-        </div>
-        <div>
-          <label class="modal-sheet__field-label" for="bs-photo">Progress photo</label>
-          <input class="input" type="file" id="bs-photo" accept="image/*" capture="environment" />
-        </div>
-        <button type="submit" class="btn btn-primary">Save Check-in</button>
-      </form>
-    `,
-    onOpen: () => {
-      document.getElementById('bodystat-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
+function renderHistoryDetail(session) {
+  const contentEl = document.getElementById('gym-content');
 
-        const readNum = (id) => {
-          const v = document.getElementById(id).value;
-          return v === '' ? null : Number(v);
-        };
-        const measurements = {};
-        if (readNum('bs-waist') != null) measurements.waist = readNum('bs-waist');
-        if (readNum('bs-chest') != null) measurements.chest = readNum('bs-chest');
+  contentEl.innerHTML = `
+    <button class="btn btn-secondary" id="gym-back-btn">&larr; History</button>
+    <div class="page-header" style="padding-left:0;">
+      <div class="page-header__title">${escapeHTML(session.workoutName)}</div>
+      <div class="page-header__subtitle">${formatDate(session.createdAt)} · ${formatDuration(session.durationSec)}</div>
+    </div>
+    ${
+      session.type === 'running' && session.running
+        ? `<div class="card">
+             <div class="list-row__title mono">${session.running.durationMin} min${session.running.distanceMi ? ' · ' + session.running.distanceMi + ' mi' : ''}${session.running.pace ? ' · ' + escapeHTML(session.running.pace) : ''}</div>
+             ${session.running.notes ? `<div class="list-row__meta">${escapeHTML(session.running.notes)}</div>` : ''}
+           </div>`
+        : session.exercises
+            .map(
+              (ex) => `
+                <div class="card gym-exercise">
+                  <div class="gym-exercise__name">${escapeHTML(ex.name)}</div>
+                  <div class="gym-exercise__prev mono">${ex.sets.map((s) => `${s.weight} lb × ${s.reps}${s.completed ? '' : ' (skipped)'}`).join(', ')}</div>
+                </div>
+              `
+            )
+            .join('')
+    }
+  `;
 
-        await Storage.bodyStats.save(
-          createBodyStat({
-            weight: readNum('bs-weight'),
-            bodyFatPercent: readNum('bs-bf'),
-            measurements,
-            photo: document.getElementById('bs-photo').files[0] || null,
-          })
-        );
-        renderBodyTab();
-        closeModal();
-      });
-    },
+  document.getElementById('gym-back-btn').addEventListener('click', renderHistory);
+}
+
+/* =====================================================================
+   BODY STATS — weight log only (for now, by design)
+   ===================================================================== */
+
+async function renderBody() {
+  const contentEl = document.getElementById('gym-content');
+  const entries = (await Storage.bodyStats.getAll()).sort((a, b) => b.createdAt - a.createdAt);
+  const latest = entries.find((e) => e.weight != null);
+
+  contentEl.innerHTML = `
+    <button class="btn btn-secondary" id="gym-back-btn">&larr; Gym</button>
+    <div class="section-label">Body Stats</div>
+    <div class="stat-tile">
+      <div class="stat-tile__label">Current Weight</div>
+      <div class="stat-tile__value">${latest ? latest.weight + ' lb' : '—'}</div>
+      <div class="stat-tile__meta">${latest ? 'as of ' + latest.date : ''}</div>
+    </div>
+    <button class="btn btn-primary" id="gym-add-weight-btn">+ Log Weight</button>
+    ${entries
+      .filter((e) => e.weight != null)
+      .map(
+        (e) => `
+          <div class="list-row">
+            <div class="list-row__title mono">${e.weight} lb</div>
+            <span class="list-row__meta">${e.date}</span>
+          </div>
+        `
+      )
+      .join('')}
+  `;
+
+  document.getElementById('gym-back-btn').addEventListener('click', renderHome);
+
+  document.getElementById('gym-add-weight-btn').addEventListener('click', () => {
+    openModal({
+      title: 'Log Weight',
+      contentHTML: `
+        <form id="weight-form" class="gym-form">
+          <div>
+            <label class="modal-sheet__field-label" for="bw-weight">Weight (lb)</label>
+            <input class="input mono" type="number" inputmode="decimal" step="any" id="bw-weight" required />
+          </div>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+      `,
+      onOpen: () => {
+        document.getElementById('weight-form').addEventListener('submit', async (event) => {
+          event.preventDefault();
+          await Storage.bodyStats.save(createBodyStat({ weight: Number(document.getElementById('bw-weight').value) }));
+          renderBody();
+          closeModal();
+        });
+      },
+    });
   });
 }

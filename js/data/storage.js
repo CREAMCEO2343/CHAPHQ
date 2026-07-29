@@ -13,7 +13,7 @@
 // will need to change.
 
 import { getAll, get, put, remove } from './db.js';
-import { STORE_NAMES, DEFAULT_SPLITS, createWorkoutSplit } from './schema.js';
+import { STORE_NAMES, DEFAULT_WORKOUTS, createWorkout, createBodyStat } from './schema.js';
 
 // Builds the standard set of functions (getAll/get/save/remove) for a
 // store, so we don't repeat the same four lines eight times below.
@@ -37,8 +37,8 @@ export const Storage = {
   },
 
   // Gym pillar
-  workoutSplits: createCollection(STORE_NAMES.WORKOUT_SPLITS),
-  exerciseLogs: createCollection(STORE_NAMES.EXERCISE_LOGS),
+  workouts: createCollection(STORE_NAMES.WORKOUTS),
+  workoutSessions: createCollection(STORE_NAMES.WORKOUT_SESSIONS),
   bodyStats: createCollection(STORE_NAMES.BODY_STATS),
 
   // Investing pillar
@@ -64,14 +64,20 @@ export const Storage = {
   },
 };
 
-// Runs once at startup (called from app.js). If the Gym pillar has no
-// splits yet — first launch, or right after this feature shipped — seed
-// the 5 default splits so the Workout tab never starts empty.
+// Runs once at startup (called from app.js). Seeds starter data so no
+// screen ever opens onto an empty database:
+//   - the 5 default workout templates (Chest+Triceps ... Running)
+//   - the first body-stat entry (Liam's starting weight, 155 lb)
 export async function seedDefaultsIfNeeded() {
-  const splits = await Storage.workoutSplits.getAll();
-  if (splits.length === 0) {
-    for (const split of DEFAULT_SPLITS) {
-      await Storage.workoutSplits.save(createWorkoutSplit(split));
+  const workouts = await Storage.workouts.getAll();
+  if (workouts.length === 0) {
+    for (const workout of DEFAULT_WORKOUTS) {
+      await Storage.workouts.save(createWorkout(workout));
     }
+  }
+
+  const bodyStats = await Storage.bodyStats.getAll();
+  if (bodyStats.length === 0) {
+    await Storage.bodyStats.save(createBodyStat({ weight: 155 }));
   }
 }

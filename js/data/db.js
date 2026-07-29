@@ -18,7 +18,9 @@ const DB_NAME = 'liamhq-db';
 // v2: Liam HQ pillar restructure — added foodLogs, workoutSplits,
 // bodyStats, trades, watchlist, macroNotes, bizItems stores.
 // v3: added holdings (portfolio); removed goals (feature dropped).
-const DB_VERSION = 3;
+// v4: Gym refactor — workouts + workoutSessions replace
+// workoutSplits + exerciseLogs.
+const DB_VERSION = 4;
 
 let dbPromise = null;
 
@@ -49,7 +51,15 @@ function openDB() {
       });
     };
 
-    request.onsuccess = () => resolve(request.result);
+    request.onsuccess = () => {
+      const db = request.result;
+      // If a newer version of the app (in another tab, or after an
+      // update) asks to upgrade the database, close our connection so
+      // the upgrade isn't blocked forever. Without this, the app can
+      // hang on a white screen after an update.
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     request.onerror = () => reject(request.error);
   });
 

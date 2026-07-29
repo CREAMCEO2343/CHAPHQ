@@ -19,8 +19,8 @@ export const STORE_NAMES = {
   GROCERY_ITEMS: 'groceryItems',
   FOOD_LOGS: 'foodLogs',
   // Gym pillar
-  WORKOUT_SPLITS: 'workoutSplits',
-  EXERCISE_LOGS: 'exerciseLogs',
+  WORKOUTS: 'workouts',
+  WORKOUT_SESSIONS: 'workoutSessions',
   BODY_STATS: 'bodyStats',
   // Investing pillar
   HOLDINGS: 'holdings',
@@ -41,8 +41,8 @@ export const STORE_DEFINITIONS = [
   { name: STORE_NAMES.MEALS, keyPath: 'id' },
   { name: STORE_NAMES.GROCERY_ITEMS, keyPath: 'id' },
   { name: STORE_NAMES.FOOD_LOGS, keyPath: 'id' },
-  { name: STORE_NAMES.WORKOUT_SPLITS, keyPath: 'id' },
-  { name: STORE_NAMES.EXERCISE_LOGS, keyPath: 'id' },
+  { name: STORE_NAMES.WORKOUTS, keyPath: 'id' },
+  { name: STORE_NAMES.WORKOUT_SESSIONS, keyPath: 'id' },
   { name: STORE_NAMES.BODY_STATS, keyPath: 'id' },
   { name: STORE_NAMES.HOLDINGS, keyPath: 'id' },
   { name: STORE_NAMES.TRADES, keyPath: 'id' },
@@ -56,15 +56,74 @@ export const STORE_DEFINITIONS = [
   { name: STORE_NAMES.SETTINGS, keyPath: 'key' },
 ];
 
-// The 5 workout splits the Gym pillar starts with. These are seeded into
-// the database on first launch (see storage.js) and fully editable after
-// that — this list is only the starting point, not a limit.
-export const DEFAULT_SPLITS = [
-  { name: 'Chest / Tri', icon: '🏋️' },
-  { name: 'Back / Bi', icon: '🚣' },
-  { name: 'Shoulders', icon: '🤸' },
-  { name: 'Legs', icon: '🦵' },
-  { name: 'Cardio', icon: '🏃' },
+// The default workout templates the Gym pillar starts with. Seeded on
+// first launch (see storage.js) and fully editable after that — add,
+// remove, and reorder exercises freely; this list is only the starting
+// point, not a limit. `order` controls card position on the Gym home.
+export const DEFAULT_WORKOUTS = [
+  {
+    name: 'Chest + Triceps',
+    type: 'lifting',
+    estimatedMin: 50,
+    order: 1,
+    exercises: [
+      { name: 'Bench Press' },
+      { name: 'Incline Dumbbell Press' },
+      { name: 'Standing Cable Fly' },
+      { name: 'Dips' },
+      { name: 'Overhead Rope Extension' },
+      { name: 'Cable Pushdown' },
+    ],
+  },
+  {
+    name: 'Back + Biceps',
+    type: 'lifting',
+    estimatedMin: 55,
+    order: 2,
+    exercises: [
+      { name: 'Lat Pulldown' },
+      { name: 'Seated Cable Row' },
+      { name: 'Chest Supported Row' },
+      { name: 'Straight Arm Cable Pulldown' },
+      { name: 'Incline Dumbbell Curl' },
+      { name: 'Preacher Curl' },
+      { name: 'Hammer Curl' },
+    ],
+  },
+  {
+    name: 'Shoulders + Abs',
+    type: 'lifting',
+    estimatedMin: 45,
+    order: 3,
+    exercises: [
+      { name: 'Dumbbell Shoulder Press' },
+      { name: 'Dumbbell Lateral Raise' },
+      { name: 'Rear Delt Fly' },
+      { name: 'Hanging Leg Raises' },
+      { name: 'Cable Crunch' },
+    ],
+  },
+  {
+    // Intentionally short — maintenance, not hypertrophy.
+    name: 'Legs',
+    type: 'lifting',
+    estimatedMin: 35,
+    order: 4,
+    exercises: [
+      { name: 'Leg Press' },
+      { name: 'Romanian Deadlift' },
+      { name: 'Standing Calf Raise' },
+    ],
+  },
+  {
+    // A simple running log: duration, optional distance/pace/notes.
+    // No GPS, maps, heart rate, or health integrations — on purpose.
+    name: 'Running',
+    type: 'running',
+    estimatedMin: 30,
+    order: 5,
+    exercises: [],
+  },
 ];
 
 function newId() {
@@ -129,38 +188,49 @@ export function createFoodLog(overrides = {}) {
 
 // ---- Gym pillar ----
 
-export function createWorkoutSplit(overrides = {}) {
+// A workout template: an ordered, editable list of exercises.
+export function createWorkout(overrides = {}) {
   return {
     id: newId(),
     name: '',
-    icon: '🏋️',
-    exercises: [], // [{ name, targetSets, targetReps }]
+    type: 'lifting', // 'lifting' | 'running'
+    estimatedMin: 45,
+    order: 99,
+    exercises: [], // [{ name }] — order in this array IS the display order
+    lastCompletedAt: null, // timestamp of the last finished session
     createdAt: Date.now(),
     ...overrides,
   };
 }
 
-export function createExerciseLog(overrides = {}) {
+// One finished training session. Lifting sessions fill `exercises`;
+// running sessions fill `running` instead. History lists these.
+export function createWorkoutSession(overrides = {}) {
   return {
     id: newId(),
-    splitId: null,
-    exerciseName: '',
+    workoutId: null,
+    workoutName: '',
+    type: 'lifting',
     date: todayISO(),
-    sets: [], // [{ reps, weight }]
+    durationSec: null,
+    exercises: [], // [{ name, sets: [{ weight, reps, completed }] }]
+    running: null, // { durationMin, distanceMi, pace, notes }
     createdAt: Date.now(),
     ...overrides,
   };
 }
 
-// Weight, body fat, measurements, progress photo — one entry per check-in.
+// One body check-in. The UI currently records weight only; bodyFatPercent,
+// measurements, and photo are deliberate placeholders so those features
+// can be switched on later without a data migration.
 export function createBodyStat(overrides = {}) {
   return {
     id: newId(),
     date: todayISO(),
     weight: null,
-    bodyFatPercent: null,
-    measurements: {}, // e.g. { waist: 32, chest: 40 }
-    photo: null,
+    bodyFatPercent: null, // not in the UI yet
+    measurements: {}, // not in the UI yet — e.g. { waist: 32, chest: 40 }
+    photo: null, // not in the UI yet
     createdAt: Date.now(),
     ...overrides,
   };

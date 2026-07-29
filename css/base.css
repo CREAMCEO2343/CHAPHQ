@@ -71,6 +71,11 @@ img {
   min-height: 100%;
 }
 
+/* Data values (weights, reps, durations, dollars) render in the mono font */
+.mono {
+  font-family: var(--font-mono);
+}
+
 /* Simple fade+rise transition applied by router.js when a section mounts */
 .section-enter {
   animation: section-enter var(--duration-base) var(--ease-standard);
