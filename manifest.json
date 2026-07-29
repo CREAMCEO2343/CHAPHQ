@@ -1,7 +1,7 @@
 {
-  "name": "Life",
-  "short_name": "Life",
-  "description": "Personal life management: meals, workouts, progress, school, and goals.",
+  "name": "Liam HQ",
+  "short_name": "Liam HQ",
+  "description": "Personal headquarters: gym, food, investing, school, and goals.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

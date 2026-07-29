@@ -15,7 +15,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Life App — Icon Generator</title>
+<title>Liam HQ — Icon Generator</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #111; color: #fff; padding: 32px; text-align: center; }
   h1 { font-size: 20px; }
@@ -29,7 +29,7 @@
 </style>
 </head>
 <body>
-  <h1>Life App Icon Generator</h1>
+  <h1>Liam HQ Icon Generator</h1>
   <p>
     Click each "Download" button below, then move the downloaded file into
     your <code>life-app/icons/</code> folder using the exact filename shown.
@@ -60,12 +60,12 @@ function drawIcon(ctx, size, maskable) {
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);
 
-  // A simple bold "L" mark, centered, representing "Life".
+  // A simple bold "HQ" mark, centered.
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = `bold ${size - pad * 2 - size * 0.28}px -apple-system, BlinkMacSystemFont, sans-serif`;
+  ctx.font = `bold ${(size - pad * 2) * 0.38}px -apple-system, BlinkMacSystemFont, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('L', size / 2, size / 2 + size * 0.04);
+  ctx.fillText('HQ', size / 2, size / 2 + size * 0.03);
 }
 
 const cardsEl = document.getElementById('cards');

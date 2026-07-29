@@ -2,11 +2,11 @@
 //
 // This is the "traffic controller" for the whole app. Since index.html is
 // the only page that ever loads, this file is what makes it FEEL like
-// there are 8 different screens: it watches the URL's hash (the part
-// after #, like #meals) and swaps the contents of <main id="app-content">
-// to match, without ever reloading the page.
+// there are separate screens: it watches the URL's hash (the part after
+// #, like #gym) and swaps the contents of <main id="app-content"> to
+// match, without ever reloading the page.
 //
-// Every section module (js/sections/dashboard.js, meals.js, etc.) must
+// Every section module (js/sections/dashboard.js, gym.js, etc.) must
 // export two functions for this to work:
 //   render()  -> returns an HTML string for that section's screen
 //   init()    -> (optional) runs AFTER that HTML is inserted into the
@@ -14,15 +14,15 @@
 //                handlers, load data, etc.
 
 import * as dashboard from './sections/dashboard.js';
-import * as meals from './sections/meals.js';
-import * as grocery from './sections/grocery.js';
-import * as workouts from './sections/workouts.js';
-import * as progress from './sections/progress.js';
+import * as gym from './sections/gym.js';
+import * as food from './sections/food.js';
+import * as investing from './sections/investing.js';
 import * as school from './sections/school.js';
-import * as goals from './sections/goals.js';
 import * as settings from './sections/settings.js';
 
-const routes = { dashboard, meals, grocery, workouts, progress, school, goals, settings };
+// "settings" is a real route (you can land on #settings) but it's reached
+// via the gear icon on the Dashboard, not from the bottom nav bar.
+const routes = { dashboard, gym, food, investing, school, settings };
 const DEFAULT_ROUTE = 'dashboard';
 
 const contentEl = document.getElementById('app-content');
