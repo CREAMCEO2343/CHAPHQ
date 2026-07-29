@@ -25,7 +25,16 @@
 
 import { Storage } from '../data/storage.js';
 import { createHolding, createTrade, createWatchlistItem, createMacroNote, createBizItem } from '../data/schema.js';
-import { refreshCloses, applyManualCloses, holdingValue, holdingDayChange, portfolioSummary } from '../data/prices.js';
+import {
+  syncPrices,
+  getSyncStatus,
+  applyManualCloses,
+  holdingValue,
+  holdingDayChange,
+  holdingGain,
+  holdingGainPercent,
+  portfolioSummary,
+} from '../data/prices.js';
 import { openModal, closeModal } from '../components/modal.js';
 import { initTabs } from '../components/tabs.js';
 import { renderRing, toSegments, renderRingLegend } from '../components/hud.js';
@@ -144,11 +153,21 @@ function hudPanelHead(title, meta = '') {
    PORTFOLIO TAB
    ===================================================================== */
 
-async function renderPortfolioTab() {
+// Guards against two background syncs overlapping (e.g. tapping away and
+// back before the first finishes) and against a finished sync redrawing
+// a tab you've since navigated off.
+let syncInFlight = false;
+
+function onPortfolioTab() {
+  return !!document.querySelector('#investing-tabs [data-tab="portfolio"].active');
+}
+
+async function renderPortfolioTab({ autoSync = true } = {}) {
   const contentEl = document.getElementById('investing-tab-content');
   const holdings = await Storage.holdings.getAll();
   const total = portfolioSummary(holdings);
   const priced = holdings.filter((h) => h.lastClose != null).length;
+  const status = await getSyncStatus();
 
   contentEl.innerHTML = `
     <div class="hud-panel hud-total">
@@ -159,16 +178,28 @@ async function renderPortfolioTab() {
           total.dayChange == null
             ? holdings.length === 0
               ? 'NO POSITIONS'
-              : `AWAITING PRICE DATA · ${priced}/${holdings.length} PRICED`
+              : `${priced}/${holdings.length} PRICED`
             : `${signedMoney(total.dayChange)} ${signedPercent(total.dayChangePercent)} TODAY`
         }
       </div>
+      ${
+        total.gain != null
+          ? `<div class="hud-total__meta mono ${deltaClass(total.gain)}">
+               ${signedMoney(total.gain)} ${signedPercent(total.gainPercent)} ALL TIME${
+                 // Say so when the figure only covers some positions —
+                 // otherwise it reads as the whole portfolio's return.
+                 total.costedCount < total.totalCount ? ` · ${total.costedCount}/${total.totalCount} WITH BASIS` : ''
+               }
+             </div>`
+          : ''
+      }
+      <div class="hud-total__meta mono" id="sync-status">${syncStatusText(status, holdings)}</div>
       <div class="hud-scanline"></div>
     </div>
 
     <div class="hud-actions">
       ${hudButton('add-holding-btn', '+ Add Holding')}
-      ${holdings.length > 0 ? hudButton('update-prices-btn', 'Update Prices') : ''}
+      ${holdings.length > 0 ? hudButton('update-prices-btn', status.hasKey ? 'Refresh Now' : 'Enter Prices') : ''}
     </div>
 
     ${ACCOUNTS.map((account) => renderAccountPanel(account, holdings)).join('')}
@@ -188,12 +219,15 @@ async function renderPortfolioTab() {
   const updateBtn = document.getElementById('update-prices-btn');
   if (updateBtn) {
     updateBtn.addEventListener('click', async () => {
-      // PHASE 2 (price feed): ask the provider first. Today it always
-      // answers "manual needed" and we fall through to the sheet; a real
-      // feed answers here and the sheet never opens.
-      const fetched = await refreshCloses(holdings);
-      if (fetched) renderPortfolioTab();
-      else openUpdatePricesModal(holdings);
+      // With a key this forces a re-check even if today's sync is done;
+      // without one it falls back to typing closes in by hand.
+      if (!status.hasKey) {
+        openUpdatePricesModal(holdings);
+        return;
+      }
+      updateBtn.disabled = true;
+      await runSync(holdings, { force: true });
+      if (onPortfolioTab()) renderPortfolioTab({ autoSync: false });
     });
   }
 
@@ -203,6 +237,63 @@ async function renderPortfolioTab() {
       if (holding) openHoldingModal(holding);
     });
   });
+
+  // Opening the tab IS the refresh trigger — no button to remember. The
+  // screen above already painted from cached prices, so this runs behind
+  // it and only redraws if something actually moved.
+  if (autoSync && holdings.length > 0) {
+    runSync(holdings).then((result) => {
+      if (!result || !onPortfolioTab()) return;
+      if (result.updated) renderPortfolioTab({ autoSync: false });
+      else refreshSyncLine(holdings);
+    });
+  }
+}
+
+async function runSync(holdings, options = {}) {
+  if (syncInFlight) return null;
+  syncInFlight = true;
+  // A full sync is paced at ~1 request/second to respect the API's burst
+  // limit, so 21 tickers takes ~25 seconds. Without a running count that
+  // reads as a hung screen.
+  const setLine = (text) => {
+    const line = document.getElementById('sync-status');
+    if (line) line.textContent = text;
+  };
+  setLine('SYNCING PRICES…');
+  try {
+    return await syncPrices(holdings, {
+      ...options,
+      onProgress: ({ done, total }) => setLine(`SYNCING PRICES… ${done}/${total}`),
+    });
+  } finally {
+    syncInFlight = false;
+  }
+}
+
+async function refreshSyncLine(holdings) {
+  const line = document.getElementById('sync-status');
+  if (!line) return;
+  line.textContent = syncStatusText(await getSyncStatus(), holdings);
+}
+
+// One line explaining where the numbers on screen came from, and what to
+// do if they're not the numbers you wanted.
+function syncStatusText(status, holdings) {
+  if (!status.hasKey) {
+    return holdings.some((h) => h.lastClose != null)
+      ? 'MANUAL PRICES · ADD AN API KEY IN SETTINGS TO AUTO-UPDATE'
+      : 'ADD AN ALPHA VANTAGE KEY IN SETTINGS TO AUTO-UPDATE';
+  }
+  if (!status.online) {
+    return status.tradingDay ? `OFFLINE · SHOWING ${status.tradingDay} CLOSES` : 'OFFLINE · NO CACHED PRICES YET';
+  }
+  if (status.lastError) return status.lastError.toUpperCase();
+  if (status.tradingDay) {
+    const unresolved = status.unresolved.length ? ` · ${status.unresolved.length} SYMBOL(S) NOT FOUND` : '';
+    return `CLOSES FROM ${status.tradingDay} · ${status.requestsRemaining} REQUESTS LEFT TODAY${unresolved}`;
+  }
+  return 'READY TO SYNC';
 }
 
 // One account bucket: the dial, its legend, and the holdings readout.
@@ -219,9 +310,23 @@ function renderAccountPanel(account, allHoldings) {
     .map((h) => {
       const value = holdingValue(h);
       const change = holdingDayChange(h);
+      const gain = holdingGain(h);
+      const gainPct = holdingGainPercent(h);
+      // Gain/loss needs a cost basis. Without one, say so rather than
+      // showing a zero that looks like a break-even position.
+      const gainLine =
+        gain == null
+          ? h.lastClose == null
+            ? ''
+            : 'add cost basis'
+          : `${signedMoney(gain)} · ${signedPercent(gainPct)}`;
+
       return `
         <div class="hud-row" data-holding-id="${h.id}" role="button" tabindex="0">
-          <span class="hud-row__ticker">${escapeHTML(h.ticker)}</span>
+          <span class="hud-row__ticker">
+            ${escapeHTML(h.ticker)}
+            ${gainLine ? `<span class="hud-row__sub ${deltaClass(gain)}">${gainLine}</span>` : ''}
+          </span>
           <span class="hud-row__cell mono">${formatShares(h.shares)}</span>
           <span class="hud-row__cell mono hud-row__cell--strong">${value == null ? '—' : moneyCompact(value)}</span>
           <span class="hud-row__cell mono ${deltaClass(change)}">${change == null ? '—' : signedMoney(change, 2)}</span>
@@ -230,9 +335,16 @@ function renderAccountPanel(account, allHoldings) {
     })
     .join('');
 
+  // The bucket's all-time gain sits next to the position count, colored
+  // by direction. hudPanelHead takes markup, so the span survives.
+  const headMeta =
+    summary.gain == null
+      ? `${holdings.length} POS`
+      : `${holdings.length} POS · <span class="${deltaClass(summary.gain)}">${signedMoney(summary.gain)} ${signedPercent(summary.gainPercent)}</span>`;
+
   return `
     <div class="hud-panel hud-account">
-      ${hudPanelHead(account.label, `${holdings.length} POS`)}
+      ${hudPanelHead(account.label, headMeta)}
 
       <div class="hud-dial">
         ${renderRing({
@@ -289,7 +401,7 @@ function openHoldingModal(existing = null) {
           </div>
           <div>
             <label class="modal-sheet__field-label" for="h-avgcost">Cost basis / share</label>
-            <input class="input mono" type="number" inputmode="decimal" step="any" id="h-avgcost" value="${holding.avgCost ?? ''}" placeholder="optional" />
+            <input class="input mono" type="number" inputmode="decimal" step="any" id="h-avgcost" value="${holding.avgCost ?? ''}" placeholder="price paid" />
           </div>
         </div>
         <div>
@@ -870,15 +982,14 @@ async function renderHCTab() {
 }
 
 /* =====================================================================
-   PHASE 2 EXTENSION POINTS — deliberately empty, wired for later
+   PHASE 2 EXTENSION POINTS
    =====================================================================
 
-   1. LIVE / DELAYED PRICE FEED
-      Already seamed. Write a provider with fetchCloses(tickers) in
-      js/data/prices.js and point `provider` at it. The Update Prices
-      button above calls refreshCloses() first and only falls back to the
-      manual sheet when the provider returns null — so a working feed
-      makes the sheet disappear on its own. No change needed here.
+   1. LIVE / DELAYED PRICE FEED — BUILT.
+      Alpha Vantage daily closes, fetched automatically when this tab
+      opens (see syncPrices in js/data/prices.js). Manual entry survives
+      as the no-API-key fallback. To swap data providers, replace
+      fetchQuote() in prices.js — nothing in this file needs to change.
 
    2. NEWS FEED
       Add fetchNews(tickers) to a news provider, then add a sixth tab to

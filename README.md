@@ -83,8 +83,9 @@ js/
     storage.js        The API sections actually use (Storage.meals...).
                       Swap this file's internals for a cloud backend
                       later — no section code changes.
-    prices.js         Portfolio price layer + phase-2 hooks (live
-                      feed, news, AI chatbot).
+    prices.js         Portfolio price layer: automatic Alpha Vantage
+                      daily closes + gain/loss math. Needs a free API
+                      key, entered in Settings → Market Data.
   sections/           One file per screen: dashboard, gym, food,
                       investing, school, settings.
 ```
@@ -113,11 +114,35 @@ git commit -m "..."   # ...and save them with a message
 If something ever breaks badly, the history means nothing is lost —
 ask Claude (or search "git restore") to roll back.
 
+## Live stock prices
+
+The Investing tab fetches daily closing prices automatically whenever you
+open it. It needs a **free Alpha Vantage API key**:
+
+1. Get one at <https://www.alphavantage.co/support/#api-key> (~20 seconds,
+   no card).
+2. In the app: **Settings → Market Data**, paste it, tap **Save Key**.
+
+That's it — there's no refresh button to remember. Two things worth
+knowing:
+
+- The free tier allows **25 requests a day** and there are **21 tickers**,
+  so the app fetches only what's changed. Once a day's closes are in,
+  reopening the tab costs nothing. The status line under the portfolio
+  total always says where the numbers came from and how many requests
+  are left.
+- Gain/loss needs a **cost basis** (price paid per share), entered per
+  holding. Without it a position still shows its value and day change,
+  but says "add cost basis" instead of inventing a return.
+
+Prices are stored on the holdings themselves, so the last good numbers
+stay on screen offline or if the API is down.
+
 ## Phase 2 ideas already wired for
 
 - **Cloud sync** — rewrite the inside of `js/data/storage.js`.
-- **Live/delayed stock prices, news feed, AI portfolio chatbot** — see
-  the provider seam notes at the top of `js/data/prices.js`.
+- **News feed, AI portfolio chatbot** — see the extension-point notes at
+  the bottom of `js/sections/investing.js`.
 - **AI food quick-add** — replace `estimateFromText()` in
   `js/sections/food.js`.
 - **Body fat %, measurements, progress photos** — fields already exist

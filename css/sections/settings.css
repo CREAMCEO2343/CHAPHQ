@@ -14,3 +14,20 @@
 .settings-theme-row {
   cursor: pointer;
 }
+
+/* Market data API key card */
+.settings-apikey {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings-apikey__actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.settings-apikey__actions .btn {
+  flex: 1;
+  width: auto;
+}
