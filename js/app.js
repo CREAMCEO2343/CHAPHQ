@@ -10,6 +10,21 @@ import { initRouter } from './router.js';
 import { initNavbar } from './components/navbar.js';
 import { seedDefaultsIfNeeded } from './data/storage.js';
 
+const SPLASH_FADE_MS = 400; // must match the transition duration in index.html
+
+// Fades out the boot splash (the seal on black, defined inline in
+// index.html) once the first screen is actually on-screen and
+// interactive — not before.
+function hideBootSplash() {
+  const splash = document.getElementById('boot-splash');
+  if (!splash) return;
+  splash.classList.add('boot-splash-hidden');
+  // A timer (not transitionend) removes it — transitionend never fires if
+  // the tab is backgrounded mid-fade, which would leave the splash stuck
+  // in the DOM (invisible, but still blocking taps) forever.
+  setTimeout(() => splash.remove(), SPLASH_FADE_MS);
+}
+
 function registerServiceWorker() {
   // Service workers only work over HTTPS or on localhost — never over a
   // plain file:// path — so this quietly does nothing if you just
@@ -27,5 +42,8 @@ function registerServiceWorker() {
 initNavbar();
 // Seed starter data (the 5 workout splits) before the first screen
 // renders, so sections never load against an empty database.
-seedDefaultsIfNeeded().then(() => initRouter());
+seedDefaultsIfNeeded().then(() => {
+  initRouter();
+  hideBootSplash();
+});
 registerServiceWorker();

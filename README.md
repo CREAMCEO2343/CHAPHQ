@@ -43,11 +43,19 @@ you get an `https://...` address — visit it once on the iPhone, Add to
 Home Screen, and the app then works offline, from anywhere, no PC
 needed. Ask Claude to set this up when you're ready.
 
-## App icons (one-time step)
+## Brand assets
 
-Open `icon-generator.html` in a browser, download each icon, and drop
-the files into the `icons/` folder using the exact filenames shown.
-Without them the Home-Screen icon is a blank placeholder.
+`icons/` holds the real CHAPHQ artwork (the gold bull-and-hand mark,
+"Non Sine Periculo") generated from the master files Liam supplied:
+
+- `icon-1024.png`, `icon-512.png`, `icon-512-maskable.png`, `icon-192.png`,
+  `icon-180.png` — the app icon at every size iOS/PWA installs need.
+- `seal.png` — the full circular seal (with the ring text), used on the
+  boot splash screen and the Settings page.
+
+To swap the artwork later: replace the source PNGs and re-run the same
+resize steps (ask Claude — it's a five-line script, no design tool
+needed).
 
 ## How the project is organized
 

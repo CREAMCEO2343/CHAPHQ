@@ -1,5 +1,16 @@
 /* settings.css — styles specific to the Settings screen. */
 
+.settings-seal {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0 var(--space-4);
+}
+
+.settings-seal img {
+  width: 140px;
+  height: 140px;
+}
+
 .settings-theme-row {
   cursor: pointer;
 }

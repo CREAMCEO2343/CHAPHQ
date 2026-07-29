@@ -39,6 +39,34 @@
   })();
 </script>
 
+<!--
+  Boot splash styles live here, inline, instead of in base.css — this
+  way the black background + centered seal show up the INSTANT the page
+  starts loading, before any external stylesheet has had a chance to
+  arrive. #boot-splash-hidden (added by app.js once the app is ready)
+  fades it out and then removes it from layout entirely.
+-->
+<style>
+  #boot-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0A0C10;
+    transition: opacity 0.4s ease;
+  }
+  #boot-splash img {
+    width: 55vw;
+    max-width: 260px;
+  }
+  #boot-splash.boot-splash-hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+</style>
+
 <!-- ===== PWA basics: lets any browser install this as an app ===== -->
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#0A0C10" />
@@ -66,6 +94,13 @@
 <link rel="stylesheet" href="css/sections/settings.css" />
 </head>
 <body>
+
+  <!-- Boot splash: the CHAPHQ seal on brand-black, visible the instant
+       the app opens (styles are inline in the head so nothing has to
+       load first). app.js fades it out once the app is ready. -->
+  <div id="boot-splash">
+    <img src="icons/seal.png" alt="CHAPHQ — Non Sine Periculo" />
+  </div>
 
   <!-- Everything a section renders goes inside here. router.js controls this. -->
   <main id="app-content"></main>

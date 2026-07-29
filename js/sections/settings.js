@@ -37,6 +37,10 @@ export function render() {
       <div class="page-header__title">Settings</div>
     </div>
     <div class="page-content">
+      <div class="settings-seal">
+        <img src="icons/seal.png" alt="CHAPHQ — Non Sine Periculo" />
+      </div>
+
       <div class="section-label">Appearance</div>
       <div id="theme-options">
         ${THEME_OPTIONS.map(
@@ -54,7 +58,7 @@ export function render() {
 
       <div class="section-label">About</div>
       <div class="card">
-        <div class="list-row__title">CHAPHQ</div>
+        <div class="list-row__title">CHAPHQ — Non Sine Periculo</div>
         <div class="list-row__meta">Personal headquarters — gym, food, investing, school. Built to grow.</div>
       </div>
     </div>
